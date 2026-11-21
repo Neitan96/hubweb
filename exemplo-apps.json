@@ -47,35 +47,28 @@
       "quando": ["abrir", "hub"],
       "quando_doc": "O que dispara uma busca automática: 'abrir' (o app foi aberto ou trazido para a frente) e/ou 'hub' (o usuário voltou ao launcher). Padrão: ['abrir']. Lista vazia = nenhuma busca automática, só o botão.",
       "espalharSegundos": 30,
-      "espalharSegundos_doc": "Cada busca automática espera um tempo aleatório de 0 a N segundos (máx. 600) antes de sair, para muitos aparelhos não consultarem o servidor no mesmo instante. Padrão 0 (sem espera). O botão não espera."
+      "espalharSegundos_doc": "Cada busca automática espera um tempo aleatório de 0 a N segundos (máx. 600) antes de sair, para muitos aparelhos não consultarem o servidor no mesmo instante. Padrão 0 (sem espera). O botão não espera.",
+      "ativo": true,
+      "ativo_doc": "false desliga a busca AUTOMÁTICA (padrão true). O botão de atualizar e o 'Atualizar agora' das configurações continuam buscando. Vale também para 'dicas' e 'app'."
     },
     "lista_doc": "Regra de atualização da lista (este JSON).",
     "dicas": {
       "intervaloMinimoSegundos": 900,
       "quando": ["abrir"],
-      "espalharSegundos": 60
+      "espalharSegundos": 60,
+      "ativo": true
     },
-    "dicas_doc": "Regra de atualização das dicas; mesmos campos da regra da lista (veja acima)."
+    "dicas_doc": "Regra de atualização das dicas; mesmos campos da regra da lista (veja acima).",
+    "app": {
+      "intervaloMinimoSegundos": 21600,
+      "quando": ["abrir", "hub"],
+      "espalharSegundos": 300,
+      "ativo": true
+    },
+    "app_doc": "Verificação de versão nova do HubWeb, sem a Play Store: o app consulta o último Release do repositório do projeto no GitHub (o endereço fica dentro do app, não vem deste JSON). Mesmos campos da regra da lista; padrão: a cada 6 h (21600), ao abrir e ao voltar ao hub. 'ativo': false desliga a verificação por completo (sem aviso e sem botão nas configurações). Se houver versão nova, aparece um aviso no hub; aparelho comum pede a confirmação do usuário e a permissão 'Instalar apps desconhecidos'; device owner instala sozinho. Não use em versão publicada na Play Store."
   },
   "atualizacao_doc": "Bloco opcional. Sem ele, valem os padrões: buscar ao abrir o app, no mínimo a cada 60 s. A regra vem do último JSON recebido (em cache).",
 
-  "atualizacaoApp": {
-    "versionCode": 4,
-    "versionCode_doc": "O versionCode (número inteiro) da versão do HubWeb que os aparelhos devem ter. Se for maior que o instalado, o app avisa no hub e oferece a atualização. O APK precisa ter exatamente este versionCode (o app confere).",
-    "versao": "1.0.3",
-    "versao_doc": "Texto da versão, só para mostrar ao usuário. Opcional.",
-    "url": "https://api.exemplo.com/downloads/HubWeb-1.0.3.apk",
-    "url_doc": "Endereço https do APK. Só https; o app recusa http.",
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "sha256_doc": "SHA-256 do APK, 64 caracteres hexadecimais. Obrigatório: sem ele, ou se não conferir com o arquivo baixado, o app não instala. Gere com: Get-FileHash -Algorithm SHA256 HubWeb.apk",
-    "token": null,
-    "token_doc": "Token Bearer do download. Sem ele, usa o token da lista quando o APK está no mesmo servidor. null = não usa.",
-    "obrigatoria": false,
-    "obrigatoria_doc": "true tira o botão \"Depois\" do aviso do hub (padrão false). Se a instalação falhar, o botão volta, para o aviso não prender o hub.",
-    "notas": "Correções e melhorias.",
-    "notas_doc": "Texto opcional mostrado no aviso."
-  },
-  "atualizacaoApp_doc": "Bloco opcional: atualização do próprio app, sem a Play Store. Sem ele (ou com dados inválidos) o app não oferece atualização. O APK novo precisa ser assinado com a MESMA chave do instalado e ter versionCode maior. Aparelho comum: o Android pede a confirmação do usuário e a permissão 'Instalar apps desconhecidos'. Device owner: instala sozinho, no hub. Não use em versão publicada na Play Store (a política da loja proíbe).",
   "telemetria": {
     "_doc": "Envio periódico de dados do aparelho (POST), só com o app aberto em primeiro plano.",
     "url": "https://api.exemplo.com/hubweb/telemetria",

@@ -122,6 +122,19 @@ class Prefs(ctx: Context) {
         get() = sp.getString("dicasUrlBaixada", "") ?: ""
         set(v) = sp.edit().putString("dicasUrlBaixada", v).apply()
 
+    /** Última consulta (tentativa) ao GitHub por versão nova do app, a última que deu certo e a versão nova achada (JSON). */
+    var appTentativaEm: Long
+        get() = sp.getLong("appTentativaEm", 0)
+        set(v) = sp.edit().putLong("appTentativaEm", v).apply()
+
+    var appVerificadoEm: Long
+        get() = sp.getLong("appVerificadoEm", 0)
+        set(v) = sp.edit().putLong("appVerificadoEm", v).apply()
+
+    var appNovaJson: String
+        get() = sp.getString("appNovaJson", "") ?: ""
+        set(v) = sp.edit().putString("appNovaJson", v).apply()
+
     /** Usuários identificados por sistema (JSON); vale até o aparelho reiniciar, como os cookies. */
     var usersJson: String
         get() = sp.getString("usersJson", "") ?: ""

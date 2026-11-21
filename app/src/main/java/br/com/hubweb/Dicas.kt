@@ -142,6 +142,7 @@ class TipsRepo(ctx: Context, private val prefs: Prefs, private val repo: ConfigR
             force -> if (recente(5_000)) return
             urlNova -> {} // endereço novo: baixa já
             semCache -> if (recente(regra.intervaloSegundos * 1000L)) return // nada baixado: tenta em qualquer gatilho
+            !regra.ativo -> return // verificação automática desligada pela lista (o botão ainda busca)
             gatilho == "config" -> return // a lista chegou e nada mudou nas dicas
             gatilho !in regra.quando -> return
             recente(regra.intervaloSegundos * 1000L) -> return

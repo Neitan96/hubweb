@@ -253,6 +253,7 @@ private fun buildRows(items: List<AppItem>): List<Any> {
 
 /** Descrição curta de uma regra de atualização, para as configurações. */
 private fun regraTexto(r: RegraAtualizacao): String {
+    if (!r.ativo) return "desativada"
     if (r.quando.isEmpty()) return "só pelo botão"
     val quando = r.quando.sorted().joinToString(" e ") { if (it == "hub") "ao voltar ao hub" else "ao abrir o app" }
     val s = r.intervaloSegundos
@@ -508,9 +509,13 @@ fun SettingsScreen(
         }
         if (updater.disponivel) {
             OutlinedButton(onClick = { updater.instalar() }, enabled = !updater.baixando) { Text("Atualizar o app agora") }
+        } else if (updater.ativo) {
+            OutlinedButton(onClick = { updater.verificar(force = true) }, enabled = !updater.verificando && !updater.baixando) {
+                Text("Verificar atualização do app")
+            }
         }
         Text(
-            "Atualização automática. Lista: ${regraTexto(repo.atualizacao.lista)}. Dicas: ${regraTexto(repo.atualizacao.dicas)}.",
+            "Atualização automática. Lista: ${regraTexto(repo.atualizacao.lista)}. Dicas: ${regraTexto(repo.atualizacao.dicas)}. App: ${regraTexto(repo.atualizacao.app)}.",
             style = MaterialTheme.typography.bodySmall,
         )
         // Quem está logado em cada sistema (diagnóstico da detecção de usuário).

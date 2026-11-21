@@ -52,8 +52,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var tracker: UserTracker
     private lateinit var tips: TipsRepo
     private lateinit var updater: AppUpdater
-    private var adiadoCodigo by mutableStateOf(0L) // versionCode cujo aviso o usuário adiou ("Depois")
-    private var autoCodigo = 0L // versionCode já tentado sozinho (device owner) nesta execução
+    private var adiadoVersao by mutableStateOf("") // versão cujo aviso o usuário adiou ("Depois")
+    private var autoVersao = "" // versão já tentada sozinha (device owner) nesta execução
 
     private var screen by mutableStateOf(Screen.LAUNCHER)
     private var current by mutableStateOf<Entry?>(null)
@@ -177,20 +177,22 @@ class MainActivity : ComponentActivity() {
                 }
                 // Atualização do app: device owner instala sozinho (no hub, para não derrubar um sistema em uso);
                 // nos demais aparelhos o hub mostra o aviso.
-                val novo = repo.atualizacaoApp
-                LaunchedEffect(screen, novo?.versionCode) {
+                val novo = updater.nova
+                LaunchedEffect(screen) {
+                    if (screen == Screen.LAUNCHER) updater.verificar(gatilho = "hub")
+                }
+                LaunchedEffect(screen, novo?.versao, updater.disponivel) {
                     if (screen == Screen.LAUNCHER && novo != null && updater.disponivel && updater.deviceOwner &&
-                        autoCodigo != novo.versionCode
+                        autoVersao != novo.versao
                     ) {
-                        autoCodigo = novo.versionCode
+                        autoVersao = novo.versao
                         updater.instalar()
                     }
                 }
                 AppUpdateDialog(
                     updater,
-                    mostrar = screen == Screen.LAUNCHER && !updater.deviceOwner &&
-                        (novo?.obrigatoria == true || novo?.versionCode != adiadoCodigo),
-                    onDepois = { adiadoCodigo = novo?.versionCode ?: 0L },
+                    mostrar = screen == Screen.LAUNCHER && !updater.deviceOwner && novo?.versao != adiadoVersao,
+                    onDepois = { adiadoVersao = novo?.versao ?: "" },
                 )
                 Surface(Modifier.fillMaxSize().safeDrawingPadding()) {
                     when (screen) {
@@ -303,6 +305,7 @@ class MainActivity : ComponentActivity() {
         // esse gatilho e se o intervalo mínimo (atualizacao.lista / atualizacao.dicas) já passou.
         repo.refresh(gatilho = "abrir")
         tips.refresh(gatilho = "abrir")
+        updater.verificar(gatilho = "abrir")
     }
 
     override fun onResume() {

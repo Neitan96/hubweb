@@ -507,42 +507,32 @@ Para o app mostrar a logo, a `logoUrl` precisa ser `http` ou `https`; o token da
 O botão de volta ao launcher, o do leitor de código, o de trocar usuário (crachá) e o de esconder a barra não podem ser ocultados. Nos botões flutuantes (popup), `atualizar` e `inicio` também valem para o cabeçalho do popup (o de fechar fica sempre). O botão **Voltar do Android** continua navegando para trás normalmente.
 
 ## Atualização do próprio app (sem a Play Store)
-O bloco `atualizacaoApp` da lista diz qual versão do HubWeb os aparelhos devem ter. O app compara o `versionCode` com o instalado; se o da lista for maior, ele baixa o APK, confere e instala.
+O app procura versão nova sozinho no **GitHub Releases** do projeto (o repositório está fixo no app, em `AppUpdater.REPO`, em `AppUpdate.kt`; troque-o se fizer um fork). A lista **não** traz endereço, versão nem hash: ela só liga, desliga e regula a verificação, no bloco `atualizacao.app`:
 
 ```json
-"atualizacaoApp": {
-  "versionCode": 4, "versao": "1.0.3",
-  "url": "https://api.exemplo.com/downloads/HubWeb-1.0.3.apk",
-  "sha256": "<64 caracteres hexadecimais>",
-  "token": null, "obrigatoria": false, "notas": "Correções e melhorias."
-}
+"atualizacao": { "app": { "ativo": true, "intervaloMinimoSegundos": 21600, "quando": ["abrir", "hub"], "espalharSegundos": 300 } }
 ```
 
-| Chave | Padrão | O que faz |
-|---|---|---|
-| `versionCode` | (obrigatório) | Número da versão. Precisa ser maior que o instalado e **igual** ao `versionCode` do APK |
-| `versao` | nenhum | Texto da versão, só para mostrar |
-| `url` | (obrigatório) | Endereço **https** do APK |
-| `sha256` | (obrigatório) | SHA-256 do APK (hex, 64 caracteres). Sem ele, ou se não conferir, o app não instala. No PowerShell: `Get-FileHash -Algorithm SHA256 "HubWeb 1.0.3.apk"` |
-| `token` | nenhum | Token Bearer do download; sem ele vale o da lista, se o APK estiver no mesmo servidor |
-| `obrigatoria` | `false` | `true` tira o "Depois" do aviso (se a instalação falhar, o botão volta) |
-| `notas` | nenhum | Texto mostrado no aviso |
-
+- **`ativo`: `false` desliga a verificação por completo** (sem consulta ao GitHub, sem aviso e sem o botão nas Configurações). Padrão `true`.
+- Os demais campos são os da regra da lista (veja "Atualização da lista e das dicas"). Padrão: a cada **6 h**, ao abrir o app e ao voltar ao hub. O intervalo fica guardado no aparelho.
+- **Como acha a versão:** consulta o último Release (não rascunho, não pré-lançamento) e compara a tag (`v1.0.4`) com o `versionName` instalado. A consulta é anônima: o GitHub limita cerca de 60 por hora por endereço IP, então com muitos aparelhos na mesma rede mantenha o intervalo longo e use `espalharSegundos`.
+- **O que baixa:** o primeiro anexo `.apk` do Release. O SHA-256 vem do próprio GitHub (campo `digest` do arquivo) ou, na falta dele, da linha "SHA-256 do APK" da descrição, que o workflow de release escreve.
 - **Aparelho comum:** quando o hub aparece, há um aviso "Nova versão do HubWeb" com **Atualizar** e **Depois**. Na primeira vez o Android pede para liberar **"Instalar apps desconhecidos"** para o HubWeb; depois, o usuário **confirma a instalação** na tela do Android. Não há como instalar sem essa confirmação.
 - **Device owner:** a instalação é **silenciosa**, feita sozinha quando o hub está na tela (para não derrubar um sistema em uso). O app fecha ao atualizar e tenta reabrir; o Android pode impedir isso em segundo plano.
-- **Nas Configurações:** aparecem a versão instalada, a situação da atualização, o andamento e o botão **Atualizar o app agora**.
-- **Segurança:** o app só baixa por https, confere o SHA-256, confere se o APK é do mesmo pacote e do `versionCode` anunciado, e o Android só aceita se a **assinatura for a mesma** do app instalado. Guarde bem a chave (`.jks`): quem a tem e controla o endereço do APK consegue atualizar todos os aparelhos.
-- **Para publicar uma atualização:** suba o `versionCode` e o `versionName` em `app/build.gradle.kts`, gere o release, publique o APK no endereço, calcule o SHA-256 e atualize o bloco na lista.
-- **Play Store:** a política da loja não permite que um app instalado por ela se atualize por conta própria. Em versão publicada lá, retire o bloco da lista, a permissão `REQUEST_INSTALL_PACKAGES` do manifesto e o `AppUpdate.kt`.
+- **Nas Configurações:** aparecem a versão instalada, a situação, o andamento e os botões **Verificar atualização do app** e **Atualizar o app agora**.
+- **Segurança:** só https, só arquivos do próprio repositório (`github.com/<REPO>/releases/download/...`), SHA-256 conferido, pacote e `versionCode` conferidos, e o Android só aceita se a **assinatura for a mesma** do app instalado. Guarde bem a chave (`.jks`): quem a tem e consegue publicar um Release atualiza todos os aparelhos.
+- **Para publicar uma atualização:** suba `versionCode` e `versionName` em `app/build.gradle.kts` e envie a tag `vX.Y.Z` (o workflow `release.yml` compila, assina e cria o Release). Não é preciso mexer na lista.
+- **Play Store:** a política da loja não permite que um app instalado por ela se atualize por conta própria. Em versão publicada lá, retire o `AppUpdate.kt`, a permissão `REQUEST_INSTALL_PACKAGES` e os dois receivers do manifesto.
 
 ## Atualização da lista e das dicas (muitos aparelhos)
 
-Quanto mais aparelhos, mais importa **quando** cada um consulta o servidor. Tudo isto é definido no próprio JSON da lista, no bloco `atualizacao`, com uma regra para a lista e outra para as dicas:
+Quanto mais aparelhos, mais importa **quando** cada um consulta o servidor. Tudo isto é definido no próprio JSON da lista, no bloco `atualizacao`, com uma regra para a lista, outra para as dicas e outra para a verificação de versão nova do app (veja "Atualização do próprio app"):
 
 ```json
 "atualizacao": {
   "lista": { "intervaloMinimoSegundos": 300, "quando": ["abrir", "hub"], "espalharSegundos": 30 },
-  "dicas": { "intervaloMinimoSegundos": 900, "quando": ["abrir"],        "espalharSegundos": 60 }
+  "dicas": { "intervaloMinimoSegundos": 900, "quando": ["abrir"],        "espalharSegundos": 60 },
+  "app":   { "ativo": true }
 }
 ```
 
@@ -551,6 +541,7 @@ Quanto mais aparelhos, mais importa **quando** cada um consulta o servidor. Tudo
 | `intervaloMinimoSegundos` | `60` | Tempo mínimo entre duas buscas automáticas (de 10 a 86400). Conta desde a **última tentativa** (com sucesso ou falha) e fica guardado no aparelho: fechar e abrir o app **não** zera o intervalo |
 | `quando` | `["abrir"]` | O que dispara uma busca automática: `abrir` (o app foi aberto ou trazido para a frente) e/ou `hub` (o usuário voltou ao launcher, por exemplo ao sair de um sistema ou das configurações). `[]` = nenhuma busca automática, só o botão |
 | `espalharSegundos` | `0` | Cada busca automática espera um tempo **aleatório de 0 a N segundos** antes de sair. Serve para dezenas de aparelhos que abrem juntos (troca de turno) não baterem no servidor no mesmo instante |
+| `ativo` | `true` | `false` **desliga a busca automática** daquela regra. Na lista e nas dicas o botão de atualizar continua funcionando; em `app`, a verificação de versão nova é desligada por completo |
 
 **Como as regras se combinam**
 - Uma busca automática só sai se o gatilho está em `quando` **e** o intervalo mínimo já passou. Os dois valem sempre; ausentes no JSON, valem os padrões acima (abrir, 60 s).
@@ -713,7 +704,7 @@ APK em `app/build/outputs/apk/debug/HubWeb <versão> debug.apk`.
 
 **Versão:** suba `versionCode` e `versionName` em `app/build.gradle.kts` a cada APK que for distribuir.
 
-**Release automático (GitHub Actions):** o workflow `.github/workflows/release.yml` compila, assina e publica o release quando você envia uma tag `vX.Y.Z` (ela precisa ser igual ao `versionName`). Cadastre antes, em *Settings → Secrets and variables → Actions*, os segredos `KEYSTORE_BASE64` (o `.jks` em base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS` e `KEY_PASSWORD`. Depois: suba a versão, faça o commit e rode `git tag v1.0.4 && git push origin v1.0.4`. O release sai com o `HubWeb-<versão>.apk` e o SHA-256 na descrição, que são os dados do bloco `atualizacaoApp`. O workflow `build.yml` valida os JSON de exemplo e compila o debug a cada push e pull request.
+**Release automático (GitHub Actions):** o workflow `.github/workflows/release.yml` compila, assina e publica o release quando você envia uma tag `vX.Y.Z` (ela precisa ser igual ao `versionName`). Cadastre antes, em *Settings → Secrets and variables → Actions*, os segredos `KEYSTORE_BASE64` (o `.jks` em base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS` e `KEY_PASSWORD`. Depois: suba a versão, faça o commit e rode `git tag v1.0.4 && git push origin v1.0.4`. O release sai com o `HubWeb-<versão>.apk` e o SHA-256 na descrição, que o app usa para achar e conferir a atualização (a lista não precisa ser alterada). O workflow `build.yml` valida os JSON de exemplo e compila o debug a cada push e pull request.
 
 Este README e os exemplos (`exemplo-apps.json`, `exemplo-dicas.json`) são copiados para dentro do app a cada build; edite sempre os da raiz do projeto.
 

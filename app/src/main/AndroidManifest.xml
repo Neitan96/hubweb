@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Atualização do próprio app (atualizacaoApp na lista). Retire esta linha e o código de AppUpdate.kt em versões publicadas na Play Store. -->
+    <!-- Atualização do próprio app (verificação de versão nova no GitHub, regra atualizacao.app da lista). Retire esta linha e o código de AppUpdate.kt em versões publicadas na Play Store. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />

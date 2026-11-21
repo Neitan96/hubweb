@@ -85,13 +85,19 @@ class RegraAtualizacao(
     val intervaloSegundos: Int = 60,
     val quando: Set<String> = setOf("abrir"),
     val espalharSegundos: Int = 0,
+    /** false desliga a verificação automática (lista e dicas: o botão ainda busca; app: nenhuma verificação). */
+    val ativo: Boolean = true,
 )
 
-/** Bloco "atualizacao" da lista: uma regra para a lista e outra para as dicas. */
+/** Bloco "atualizacao" da lista: uma regra para a lista, outra para as dicas e outra para a verificação do app. */
 class Atualizacao(
     val lista: RegraAtualizacao = RegraAtualizacao(),
     val dicas: RegraAtualizacao = RegraAtualizacao(),
+    /** Verificação de versão nova do app (GitHub Releases): padrão a cada 6 h, ao abrir o app e ao voltar ao hub. */
+    val app: RegraAtualizacao = REGRA_APP_PADRAO,
 )
+
+val REGRA_APP_PADRAO = RegraAtualizacao(intervaloSegundos = 21_600, quando = setOf("abrir", "hub"))
 
 class Config(
     val items: List<AppItem>,
@@ -108,7 +114,6 @@ class Config(
     val aparencia: Aparencia? = null,
     val dicas: DicasConfig? = null,
     val atualizacao: Atualizacao? = null,
-    val atualizacaoApp: AtualizacaoApp? = null,
 )
 
 /**
@@ -139,7 +144,6 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
     var aparencia by mutableStateOf(Aparencia()); private set
     var dicas by mutableStateOf<DicasConfig?>(null); private set
     var atualizacao by mutableStateOf(Atualizacao()); private set
-    var atualizacaoApp by mutableStateOf<AtualizacaoApp?>(null); private set
 
     /** `modoKiosk` da última lista aplicada (null = a lista não define). Observável pela UI. */
     var modoKiosk by mutableStateOf(prefs.kioskRemote.let { if (it < 0) null else it == 1 }); private set
@@ -160,7 +164,6 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             aparencia = cfg.aparencia ?: Aparencia()
             dicas = cfg.dicas
             atualizacao = cfg.atualizacao ?: Atualizacao()
-            atualizacaoApp = cfg.atualizacaoApp
             lastUpdate = file.lastModified()
             cfg.senhaSha256?.let { prefs.passSha256 = it }
             prefs.kioskRemote = cfg.modoKiosk?.let { if (it) 1 else 0 } ?: -1
@@ -191,7 +194,7 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
         } else if (semCache) {
             if (recente(regra.intervaloSegundos * 1000L)) return // servidor fora do ar: respeita o intervalo
         } else {
-            if (gatilho !in regra.quando) return
+            if (!regra.ativo || gatilho !in regra.quando) return
             if (recente(regra.intervaloSegundos * 1000L)) return
         }
         prefs.listaTentativaEm = now
@@ -221,7 +224,6 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
                     aparencia = cfg.aparencia ?: Aparencia()
                     dicas = cfg.dicas
                     atualizacao = cfg.atualizacao ?: Atualizacao()
-            atualizacaoApp = cfg.atualizacaoApp
                     lastUpdate = System.currentTimeMillis()
                     error = null
                     loading = false
@@ -504,10 +506,10 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
          * {"intervaloMinimoSegundos": 300, "quando": ["abrir", "hub"], "espalharSegundos": 30}.
          * "quando" ausente = ["abrir"]; presente e vazio = nenhuma busca automática (só o botão).
          */
-        private fun parseRegra(o: JSONObject?): RegraAtualizacao {
-            if (o == null) return RegraAtualizacao()
+        private fun parseRegra(o: JSONObject?, padrao: RegraAtualizacao = RegraAtualizacao()): RegraAtualizacao {
+            if (o == null) return padrao
             val quando = if (o.isNull("quando")) {
-                setOf("abrir")
+                padrao.quando
             } else {
                 val lista = when (val v = o.opt("quando")) {
                     is JSONArray -> (0 until v.length()).map { v.optString(it) }
@@ -517,9 +519,10 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
                 lista.map { it.trim().lowercase() }.filter { it == "abrir" || it == "hub" }.toSet()
             }
             return RegraAtualizacao(
-                intervaloSegundos = o.optInt("intervaloMinimoSegundos", 60).coerceIn(10, 86_400),
+                intervaloSegundos = o.optInt("intervaloMinimoSegundos", padrao.intervaloSegundos).coerceIn(10, 86_400),
                 quando = quando,
-                espalharSegundos = o.optInt("espalharSegundos", 0).coerceIn(0, 600),
+                espalharSegundos = o.optInt("espalharSegundos", padrao.espalharSegundos).coerceIn(0, 600),
+                ativo = if (o.isNull("ativo")) true else o.optBoolean("ativo", true),
             )
         }
 
@@ -595,26 +598,13 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             }
             // "atualizacao": {"lista": {...}, "dicas": {...}}: intervalo mínimo e gatilhos das buscas automáticas.
             val atualizacao = root?.optJSONObject("atualizacao")?.let { a ->
-                Atualizacao(lista = parseRegra(a.optJSONObject("lista")), dicas = parseRegra(a.optJSONObject("dicas")))
-            }
-            // "atualizacaoApp": {"versionCode": 4, "versao": "1.0.3", "url": "https://...apk", "sha256": "...", "token": null,
-            // "obrigatoria": false, "notas": "..."}: a versão do app que os aparelhos devem ter. Exige url https e sha256.
-            val atualizacaoApp = root?.optJSONObject("atualizacaoApp")?.let { u ->
-                val codigo = u.optLong("versionCode", 0)
-                val url = u.str("url")?.trim().orEmpty()
-                val sha = u.str("sha256")?.trim()?.lowercase().orEmpty()
-                if (codigo <= 0 || !url.startsWith("https://", true) || !Regex("[0-9a-f]{64}").matches(sha)) null
-                else AtualizacaoApp(
-                    versionCode = codigo,
-                    versao = u.str("versao")?.trim()?.takeIf { it.isNotEmpty() },
-                    url = url,
-                    sha256 = sha,
-                    token = u.str("token")?.trim()?.takeIf { it.isNotEmpty() },
-                    obrigatoria = u.bool("obrigatoria", false),
-                    notas = u.str("notas")?.trim()?.takeIf { it.isNotEmpty() },
+                Atualizacao(
+                    lista = parseRegra(a.optJSONObject("lista")),
+                    dicas = parseRegra(a.optJSONObject("dicas")),
+                    app = parseRegra(a.optJSONObject("app"), REGRA_APP_PADRAO),
                 )
             }
-            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, atualizacaoApp)
+            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao)
         }
 
         private fun JSONObject.str(k: String): String? = if (isNull(k)) null else optString(k)

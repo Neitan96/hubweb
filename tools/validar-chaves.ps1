@@ -16,15 +16,15 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 
 # Chaves que o app lê, por bloco. "legado" = aceitas só por compatibilidade (não precisam estar no exemplo).
 $esperado = @{
-  'raiz'              = @('apps','fundoUrl','rodape','senhaSha256','senha','modoKiosk','aparencia','dicas','atualizacao','atualizacaoApp','telemetria','eventos','calculadora')
+  'raiz'              = @('apps','fundoUrl','rodape','senhaSha256','senha','modoKiosk','aparencia','dicas','atualizacao','telemetria','eventos','calculadora')
   'apps[]'            = @('nome','urlInicial','urlPermitida','icone','userAgent','permitirCopiarColar','permitirHttp','ordem','grupo','orientacao','zoom','permitirCamera','permitirUpload','permitirDownload','leitorCamera','leitorSufixo','barra','usuario','hub','flutuante','flutuanteObrigatorio','flutuanteInicial','flutuanteTravado','flutuantePosicao')
   'barra'             = @('visivel','voltar','atualizar','inicio')
   'aparencia'         = @('nome','logoUrl','logoAltura','ocultarAtualizar','ocultarConfiguracoes','ocultarUltimaAtualizacao','toquesSecreto','colunas')
   'dicas'             = @('url','token')
-  'atualizacao'       = @('lista','dicas')
-  'atualizacaoApp'    = @('versionCode','versao','url','sha256','token','obrigatoria','notas')
-  'atualizacao.lista' = @('intervaloMinimoSegundos','quando','espalharSegundos')
-  'atualizacao.dicas' = @('intervaloMinimoSegundos','quando','espalharSegundos')
+  'atualizacao'       = @('lista','dicas','app')
+  'atualizacao.lista' = @('intervaloMinimoSegundos','quando','espalharSegundos','ativo')
+  'atualizacao.dicas' = @('intervaloMinimoSegundos','quando','espalharSegundos','ativo')
+  'atualizacao.app'   = @('intervaloMinimoSegundos','quando','espalharSegundos','ativo')
   'telemetria'        = @('url','frequenciaSegundos','token','localizacao')
   'eventos'           = @('url','token','ativo')
   'calculadora'       = @('habilitada','obrigatoria','inicial','travada','posicao')
@@ -54,8 +54,7 @@ function Visita($o, [string]$bloco) {
     switch ("$bloco|$n") {
       'raiz|aparencia'    { Visita $filho 'aparencia' }
       'raiz|dicas'        { Visita $filho 'dicas' }
-      'raiz|atualizacao'  { Visita $filho 'atualizacao'; Visita $filho.lista 'atualizacao.lista'; Visita $filho.dicas 'atualizacao.dicas' }
-      'raiz|atualizacaoApp' { Visita $filho 'atualizacaoApp' }
+      'raiz|atualizacao'  { Visita $filho 'atualizacao'; Visita $filho.lista 'atualizacao.lista'; Visita $filho.dicas 'atualizacao.dicas'; Visita $filho.app 'atualizacao.app' }
       'raiz|telemetria'   { Visita $filho 'telemetria' }
       'raiz|eventos'      { Visita $filho 'eventos' }
       'raiz|calculadora'  { Visita $filho 'calculadora' }
