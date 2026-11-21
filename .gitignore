@@ -1,0 +1,25 @@
+# Segredos de assinatura (nunca versionar)
+*.jks
+*.keystore
+keystore.properties
+
+# Configuração local da máquina
+local.properties
+
+# Build e caches
+build/
+.gradle/
+.kotlin/
+*.apk
+*.aab
+
+# Copiados do projeto para o app a cada build (veja copyDocs em app/build.gradle.kts)
+app/src/main/assets/
+
+# IDE e sistema
+.idea/
+*.iml
+.vscode/
+captures/
+.DS_Store
+Thumbs.db

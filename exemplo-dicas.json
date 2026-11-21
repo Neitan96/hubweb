@@ -1,0 +1,72 @@
+{
+  "_doc": "EXEMPLO COMPLETO E DOCUMENTADO do endpoint de dicas (o app só baixa; GET). Convenção: ao lado de cada chave existe a chave 'NOME_doc' com a explicação; o app ignora toda chave terminada em _doc. O servidor pode tirá-las antes de responder, para o JSON ficar menor.",
+
+  "versao": 1,
+  "versao_doc": "Versão do formato. Só informativo: o app não usa.",
+
+  "configuracoes": {
+    "_doc": "Como e onde as dicas aparecem. A raiz também pode ser só a lista de dicas, com tudo padrão.",
+    "habilitado": true,
+    "habilitado_doc": "false desliga as dicas sem tirar o bloco 'dicas' da lista (padrão true).",
+    "mostrarEm": ["abertura", "hub"],
+    "mostrarEm_doc": "Onde aparecem (pode combinar): 'abertura' = tela de dica enquanto um sistema abre (a primeira página); 'navegacao' = em toda página lenta dentro do sistema; 'hub' = caixa destacada, de cantos arredondados, no hub, acima do rodapé. Padrão: ['abertura'].",
+    "ordem": "aleatoria",
+    "ordem_doc": "'aleatoria' (padrão; respeita o 'peso' de cada dica) ou 'sequencial' (em ordem, dando a volta).",
+    "titulo": "Você sabia?",
+    "titulo_doc": "Título padrão das dicas (padrão: Dica). Cada dica pode ter o seu.",
+    "atrasoMs": 400,
+    "atrasoMs_doc": "A tela de dica só aparece se o carregamento passar desse tempo, em milissegundos (0 a 5000; padrão 400). Páginas rápidas não piscam.",
+    "duracaoMinimaMs": 1500,
+    "duracaoMinimaMs_doc": "Depois de aparecer, a tela fica pelo menos esse tempo, em milissegundos (0 a 10000; padrão 1200), para dar tempo de ler.",
+    "trocarACadaSegundos": 8,
+    "trocarACadaSegundos_doc": "Troca a dica a cada N segundos enquanto o carregamento durar, e na caixa do hub (3 a 120; 0 = não troca; padrão 8).",
+    "corFundo": "#1A237E",
+    "corFundo_doc": "Cor de fundo da tela de dica durante o carregamento, em #RRGGBB (padrão: índigo).",
+    "corTexto": "#FFFFFF",
+    "corTexto_doc": "Cor do texto da tela de dica durante o carregamento, em #RRGGBB (padrão: branco).",
+    "hubCorFundo": "#FFF3E0",
+    "hubCorFundo_doc": "Cor de fundo da caixa de dica do hub, em #RRGGBB. Sem ela, vale corFundo.",
+    "hubCorTexto": "#E65100",
+    "hubCorTexto_doc": "Cor do texto da caixa de dica do hub, em #RRGGBB. Sem ela, vale corTexto."
+  },
+  "configuracoes_doc": "Bloco opcional. Sem ele, valem os padrões de cada chave.",
+
+  "dicas": [
+    {
+      "_doc": "Item completo de dica.",
+      "id": "bateria",
+      "id_doc": "Identificador livre, só para você se organizar (padrão: d0, d1...).",
+      "titulo": "Bateria",
+      "titulo_doc": "Título desta dica (padrão: o de configuracoes).",
+      "texto": "Coloque o tablet no carregador ao fim do turno para começar o próximo com 100%.",
+      "texto_doc": "O texto da dica (obrigatório; a dica sem texto é ignorada).",
+      "peso": 3,
+      "peso_doc": "Chance relativa no sorteio, de 1 a 100 (padrão 1). Uma dica com peso 3 sai o triplo de vezes de uma com peso 1."
+    },
+    {
+      "id": "leitura",
+      "texto": "Se o código de barras não lê, limpe a lente e aproxime o aparelho, sem inclinar."
+    },
+    {
+      "id": "webmail-anexos",
+      "titulo": "Conferência",
+      "texto": "Confira o destinatário antes de enviar uma mensagem com anexo.",
+      "sistemas": ["Webmail"],
+      "sistemas_doc": "Nomes dos sistemas (o 'nome' do item em 'apps') em que a dica vale; texto ou lista. Sem esta chave, vale em qualquer sistema e no hub: na caixa do hub só aparecem as dicas sem restrição."
+    },
+    {
+      "id": "preco",
+      "titulo": "Consulta de preço",
+      "texto": "Confira sempre a unidade (kg ou g) antes de informar o valor.",
+      "sistemas": ["Consulta de preço", "Manual"],
+      "peso": 2
+    },
+    {
+      "id": "antiga",
+      "texto": "Esta dica está desligada e não aparece.",
+      "ativa": false,
+      "ativa_doc": "false esconde a dica sem apagá-la (padrão true)."
+    }
+  ],
+  "dicas_doc": "Lista de dicas. Só 'texto' é obrigatório. Uma dica pode aparecer na tela de carregamento, na navegação e/ou no hub, conforme configuracoes.mostrarEm."
+}

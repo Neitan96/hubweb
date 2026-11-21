@@ -1,0 +1,479 @@
+{
+  "_doc": "EXEMPLO COMPLETO E DOCUMENTADO. Convenção: ao lado de cada chave existe a chave 'NOME_doc' com a explicação; o app ignora toda chave terminada em _doc. A documentação de uma chave aparece na primeira vez que ela é usada neste arquivo (os itens seguintes de 'apps' não a repetem). Chaves _doc sem a chave correspondente documentam opções que este exemplo não liga de propósito (modoKiosk, senhaSha256, senha, icone, userAgent). O servidor pode tirar todas as chaves _doc antes de responder, para o JSON ficar menor.",
+
+  "versao": 1,
+  "versao_doc": "Versão do formato do JSON. Só informativo: o app não usa.",
+
+  "fundoUrl": "https://exemplo.com/hubweb/fundo.png",
+  "fundoUrl_doc": "Imagem de plano de fundo do hub (URL http ou https; PNG, JPG ou WebP; até 15 MB). Fica centralizada e nunca é ampliada. É baixada uma vez e guardada no aparelho; só baixa de novo se a URL mudar. Sem esta chave, o fundo é removido.",
+
+  "rodape": "{nome} · {ip}",
+  "rodape_doc": "Texto fixo no rodapé do hub. Aceita as variáveis {nome} (nome do aparelho), {ip} (IPv4 local), {modelo}, {android}, {app} (versão do HubWeb), {id} (Android ID) e {atualizacao} (hora da última lista recebida); use \\n para quebrar linha (até 3 linhas). Atualiza a cada 10 s. Sem esta chave, ou com texto vazio, nada é mostrado.",
+
+  "aparencia": {
+    "_doc": "Personalização do cabeçalho do hub.",
+    "nome": "Minha Empresa",
+    "nome_doc": "Título mostrado no cabeçalho do hub (padrão: HubWeb). Só muda o texto dentro do app; o nome embaixo do ícone no Android não muda.",
+    "logoUrl": "https://exemplo.com/hubweb/logo.png",
+    "logoUrl_doc": "Logo mostrada no cabeçalho NO LUGAR do nome, alinhada à esquerda (URL http ou https; até 15 MB). Baixada uma vez e guardada no aparelho; só baixa de novo se a URL mudar. Sem esta chave, volta o nome.",
+    "logoAltura": 32,
+    "logoAltura_doc": "Altura da logo em dp, de 16 a 96 (padrão 32). A largura acompanha a proporção da imagem.",
+    "ocultarAtualizar": false,
+    "ocultarAtualizar_doc": "true esconde o botão de recarregar a lista no cabeçalho (padrão false).",
+    "ocultarConfiguracoes": false,
+    "ocultarConfiguracoes_doc": "true esconde a engrenagem (padrão false). Para entrar nas configurações, toque várias vezes seguidas no título ou na logo (veja toquesSecreto). Se a lista tem senha de administração, ela continua sendo pedida.",
+    "ocultarUltimaAtualizacao": false,
+    "ocultarUltimaAtualizacao_doc": "true esconde a linha 'Lista atualizada em ...' (padrão false). Os avisos de problema (sem acesso à lista, falha ao carregar) continuam aparecendo.",
+    "toquesSecreto": 7,
+    "toquesSecreto_doc": "Quantos toques rápidos (cada um a menos de 1,5 s do anterior) no título ou na logo abrem as configurações. De 3 a 20; padrão 7. Funciona também com a engrenagem visível.",
+    "colunas": 0,
+    "colunas_doc": "Quantas colunas o grid do hub tem, de 1 a 8. 0 (padrão) ou ausente = automático: o número de colunas depende da largura da tela. Com valor fixo, os cartões se ajustam à largura (muitas colunas em tela estreita deixam o nome do sistema cortado)."
+  },
+  "aparencia_doc": "Bloco opcional. Sem ele, o hub usa o nome HubWeb e todos os botões.",
+
+  "dicas": {
+    "_doc": "Endpoint de dicas das telas de carregamento (o app só baixa; GET).",
+    "url": "https://api.exemplo.com/hubweb/dicas",
+    "url_doc": "Endereço (http ou https) do JSON de dicas. Veja exemplo-dicas.json para o formato. Endereço novo baixa na hora; senão vale a regra de atualizacao.dicas. Sem o bloco 'dicas', não há dicas e o cache é apagado.",
+    "token": null,
+    "token_doc": "Token opcional (Authorization: Bearer) só deste endpoint. Sem ele, vale o token da lista, se for o mesmo servidor. O token só vai por https. Aqui vale null (sem token próprio)."
+  },
+
+  "atualizacao": {
+    "_doc": "Com que frequência o app busca a lista e as dicas. Importante com muitos aparelhos.",
+    "lista": {
+      "intervaloMinimoSegundos": 300,
+      "intervaloMinimoSegundos_doc": "Tempo mínimo entre duas buscas AUTOMÁTICAS, de 10 a 86400 (padrão 60). Conta desde a última tentativa (sucesso ou falha) e fica guardado no aparelho: fechar e abrir o app não zera. O botão de atualizar ignora este intervalo.",
+      "quando": ["abrir", "hub"],
+      "quando_doc": "O que dispara uma busca automática: 'abrir' (o app foi aberto ou trazido para a frente) e/ou 'hub' (o usuário voltou ao launcher). Padrão: ['abrir']. Lista vazia = nenhuma busca automática, só o botão.",
+      "espalharSegundos": 30,
+      "espalharSegundos_doc": "Cada busca automática espera um tempo aleatório de 0 a N segundos (máx. 600) antes de sair, para muitos aparelhos não consultarem o servidor no mesmo instante. Padrão 0 (sem espera). O botão não espera."
+    },
+    "lista_doc": "Regra de atualização da lista (este JSON).",
+    "dicas": {
+      "intervaloMinimoSegundos": 900,
+      "quando": ["abrir"],
+      "espalharSegundos": 60
+    },
+    "dicas_doc": "Regra de atualização das dicas; mesmos campos da regra da lista (veja acima)."
+  },
+  "atualizacao_doc": "Bloco opcional. Sem ele, valem os padrões: buscar ao abrir o app, no mínimo a cada 60 s. A regra vem do último JSON recebido (em cache).",
+
+  "atualizacaoApp": {
+    "versionCode": 4,
+    "versionCode_doc": "O versionCode (número inteiro) da versão do HubWeb que os aparelhos devem ter. Se for maior que o instalado, o app avisa no hub e oferece a atualização. O APK precisa ter exatamente este versionCode (o app confere).",
+    "versao": "1.0.3",
+    "versao_doc": "Texto da versão, só para mostrar ao usuário. Opcional.",
+    "url": "https://api.exemplo.com/downloads/HubWeb-1.0.3.apk",
+    "url_doc": "Endereço https do APK. Só https; o app recusa http.",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sha256_doc": "SHA-256 do APK, 64 caracteres hexadecimais. Obrigatório: sem ele, ou se não conferir com o arquivo baixado, o app não instala. Gere com: Get-FileHash -Algorithm SHA256 HubWeb.apk",
+    "token": null,
+    "token_doc": "Token Bearer do download. Sem ele, usa o token da lista quando o APK está no mesmo servidor. null = não usa.",
+    "obrigatoria": false,
+    "obrigatoria_doc": "true tira o botão \"Depois\" do aviso do hub (padrão false). Se a instalação falhar, o botão volta, para o aviso não prender o hub.",
+    "notas": "Correções e melhorias.",
+    "notas_doc": "Texto opcional mostrado no aviso."
+  },
+  "atualizacaoApp_doc": "Bloco opcional: atualização do próprio app, sem a Play Store. Sem ele (ou com dados inválidos) o app não oferece atualização. O APK novo precisa ser assinado com a MESMA chave do instalado e ter versionCode maior. Aparelho comum: o Android pede a confirmação do usuário e a permissão 'Instalar apps desconhecidos'. Device owner: instala sozinho, no hub. Não use em versão publicada na Play Store (a política da loja proíbe).",
+  "telemetria": {
+    "_doc": "Envio periódico de dados do aparelho (POST), só com o app aberto em primeiro plano.",
+    "url": "https://api.exemplo.com/hubweb/telemetria",
+    "url_doc": "Destino do POST. Só https (o pacote leva localização). Todo POST do app tem o formato {tipo, payload}; este é do tipo 'telemetria'. Sem esta chave, não há telemetria.",
+    "frequenciaSegundos": 60,
+    "frequenciaSegundos_doc": "Intervalo entre envios, de 10 a 86400 (padrão 60). Além disso, uma telemetria sai na hora em que o app é aberto.",
+    "token": null,
+    "token_doc": "Token opcional (Authorization: Bearer). Sem ele, vale o token da lista, se a URL for do mesmo servidor. Aqui vale null (sem token próprio).",
+    "localizacao": true,
+    "localizacao_doc": "false não pede nem envia a localização (padrão true). Com true, o Android pede a permissão ao usuário na primeira abertura."
+  },
+  "telemetria_doc": "Bloco opcional.",
+
+  "eventos": {
+    "ativo": true,
+    "ativo_doc": "false desliga os eventos de login/logout (padrão true).",
+    "url": null,
+    "url_doc": "Endereço próprio para os eventos (tipo 'evento'). Sem ele, os eventos vão para a telemetria.url, com tipo 'evento'. Só https. Aqui vale null (usa o endereço da telemetria); para um endereço próprio, ponha por exemplo https://api.exemplo.com/hubweb/eventos.",
+    "token": null,
+    "token_doc": "Token opcional só dos eventos. Sem ele, vale o da telemetria (mesmo endereço) ou o da lista (mesmo servidor). Aqui vale null (sem token próprio)."
+  },
+  "eventos_doc": "Para onde vão, na hora, os logins/logouts das detecções por evento (formulario, requisicao, resposta, cracha). Bloco opcional: sem ele os eventos usam o endereço da telemetria.",
+
+  "calculadora": {
+    "habilitada": true,
+    "habilitada_doc": "false tira a calculadora de vez: sem botão e sem a opção na lista de escolha (padrão true).",
+    "obrigatoria": false,
+    "obrigatoria_doc": "true deixa o botão sempre ligado, sem opção de desligar (padrão false).",
+    "inicial": false,
+    "inicial_doc": "Só vale se for opcional: true já vem ligada na primeira vez que a lista chega, false desligada. Depois manda a escolha do usuário.",
+    "travada": false,
+    "travada_doc": "true trava a posição do botão: o usuário não consegue arrastar (padrão false).",
+    "posicao": {
+      "x": 0.85,
+      "x_doc": "Posição horizontal, de 0 (esquerda) a 1 (direita), em fração da área livre da tela.",
+      "y": 0.6,
+      "y_doc": "Posição vertical, de 0 (topo) a 1 (base), em fração da área livre da tela."
+    },
+    "posicao_doc": "Onde o botão travado fica: um canto ('inferior-direita' é o padrão; também 'inferior-esquerda', 'superior-direita', 'superior-esquerda', 'meio-direita', 'meio-esquerda') ou {x, y} em fração da área livre da tela, de 0 a 1 (também aceita {canto: '...'}). Só vale com travada."
+  },
+  "calculadora_doc": "Controle do botão flutuante da calculadora. Bloco opcional: sem ele, a calculadora fica disponível, opcional e desligada.",
+
+  "modoKiosk": null,
+  "modoKiosk_doc": "true ou false OBRIGA o modo kiosk e trava a chave nas configurações do app; sem a chave (ou null) a escolha fica com o app (padrão). Sem device owner, o kiosk só esconde as barras do sistema e bloqueia o Voltar. Aqui vale null (não define), para não forçar o kiosk em quem copiar o arquivo; troque por true ou false para obrigar.",
+  "senhaSha256": null,
+  "senhaSha256_doc": "Senha de administração (pede-se ao abrir as configurações), como SHA-256 em hexadecimal minúsculo (64 caracteres). Recomendado em vez de 'senha'. O app guarda só o hash. Se uma lista vier sem senha, vale a última recebida. Aqui vale null (sem senha); troque pelo hash para definir uma.",
+  "senha": null,
+  "senha_doc": "Senha de administração em texto (o app a transforma em hash e não guarda o texto). Prefira senhaSha256. Aqui vale null (sem senha).",
+
+  "apps": [
+    {
+      "_doc": "Item COMPLETO (este é o Webmail): traz todas as chaves que um item de 'apps' aceita, cada uma com a sua explicação. Quando uma opção não é usada, a chave fica com o valor padrão ou null, e os itens seguintes mostram as opções em uso (botão flutuante, crachá, endpoint, tipos de detecção de usuário...).",
+      "nome": "Webmail",
+      "nome_doc": "Nome do sistema: aparece no cartão do hub, na barra e nos eventos de usuário (obrigatório).",
+      "urlInicial": "https://mail.exemplo.com/?dispositivo={nome}&ip={ip}",
+      "urlInicial_doc": "Primeira página do sistema (obrigatória). Aceita as variáveis do aparelho {nome}, {ip}, {modelo}, {android}, {app} e {id}, já codificadas para URL; elas valem só na primeira carga.",
+      "urlPermitida": ["mail.exemplo.com/*", "login.exemplo.com/*"],
+      "urlPermitida_doc": "Endereços em que o sistema pode navegar: texto ou lista, no formato host/caminho com * (qualquer coisa) e ? (um caractere), sem a query. Qualquer navegação fora é bloqueada, e o aviso mostra o endereço bloqueado. Sem esta chave, vale o host da urlInicial.",
+      "permitirCopiarColar": false,
+      "permitirCopiarColar_doc": "true libera seleção, copiar, recortar e colar na página (padrão false: bloqueado).",
+      "permitirHttp": false,
+      "permitirHttp_doc": "true aceita endereços http:// (padrão false: só https).",
+      "ordem": 1,
+      "ordem_doc": "Ordem no hub dentro do grupo (menor primeiro); empate desempata pelo nome.",
+      "grupo": "Trabalho",
+      "grupo_doc": "Agrupa os cartões do hub sob um cabeçalho com este nome. Itens sem grupo vêm primeiro.",
+      "orientacao": "retrato",
+      "orientacao_doc": "'auto' (padrão), 'retrato' ou 'paisagem': trava a orientação da tela enquanto o sistema está aberto.",
+      "barra": {
+        "visivel": true,
+        "visivel_doc": "true (padrão): a barra já abre visível quando o usuário entra no sistema; false: abre oculta e só um botãozinho no canto a mostra.",
+        "voltar": true,
+        "voltar_doc": "Botão de voltar na página (padrão true).",
+        "atualizar": true,
+        "atualizar_doc": "Botão de atualizar a página (padrão true).",
+        "inicio": false,
+        "inicio_doc": "Botão de página inicial (padrão true). Aqui está escondido de propósito, para mostrar o efeito."
+      },
+      "barra_doc": "Barra de cima do sistema. 'visivel': a barra já abre visível (true) ou oculta (false); oculta, só um botãozinho no canto a mostra. 'voltar', 'atualizar' e 'inicio' escondem esses botões (todos true por padrão). Os botões do launcher, do leitor e de trocar usuário não se escondem.",
+      "zoom": 100,
+      "zoom_doc": "Zoom do texto em % (50 a 300; padrão 100).",
+      "permitirCamera": true,
+      "permitirCamera_doc": "true libera a câmera para a própria página (padrão false). É independente do leitor de código do app (leitorCamera).",
+      "leitorCamera": true,
+      "leitorCamera_doc": "true põe na barra um botão que lê código de barras ou QR pela câmera e digita o código no campo focado da página, como um teclado (padrão false).",
+      "leitorSufixo": "enter",
+      "leitorSufixo_doc": "O que enviar depois do código lido: 'enter' (padrão), 'tab' ou '' (nada).",
+      "permitirUpload": false,
+      "permitirUpload_doc": "true libera o seletor de arquivos para envio (padrão false).",
+      "permitirDownload": false,
+      "permitirDownload_doc": "true libera downloads, apenas de endereços permitidos (padrão false).",
+      "hub": true,
+      "hub_doc": "true (padrão) mostra o item como cartão no hub; false o esconde do hub (útil para um item só flutuante, como o 'Manual' mais abaixo).",
+      "flutuante": false,
+      "flutuante_doc": "true também (ou só, com hub: false) cria um botão flutuante que abre este sistema num popup (padrão false). As quatro chaves seguintes só valem com flutuante: true; aqui ficam com os valores padrão, e o item 'Consulta de preço' as mostra em uso.",
+      "flutuanteObrigatorio": false,
+      "flutuanteObrigatorio_doc": "Com flutuante: true deixa o botão sempre ligado, sem opção de desligar; false (padrão) deixa o usuário escolher na lista de botões flutuantes.",
+      "flutuanteInicial": false,
+      "flutuanteInicial_doc": "Com flutuante opcional: true faz o botão já vir ligado na primeira vez que o item aparece na lista (padrão false). Depois manda a escolha do usuário; mudar o JSON não religa nem desliga o que ele escolheu.",
+      "flutuanteTravado": false,
+      "flutuanteTravado_doc": "Com flutuante: true trava a posição do botão, sem arrastar (padrão false). A posição salva pelo usuário é ignorada.",
+      "flutuantePosicao": "inferior-direita",
+      "flutuantePosicao_doc": "Onde o botão travado fica: um canto ('inferior-direita' padrão, 'inferior-esquerda', 'superior-direita', 'superior-esquerda', 'meio-direita', 'meio-esquerda'), também como objeto {canto: '...'}, ou {x, y} em fração (0 a 1). Só vale com flutuanteTravado.",
+      "icone": null,
+      "icone_doc": "Imagem do cartão do hub e do botão flutuante, em base64 (PNG ou JPG; com ou sem o prefixo data:image/png;base64,). Sem ela, o cartão mostra a inicial do nome. Fica grande: se o servidor montar o JSON, ele pode ler o base64 de um arquivo e preenchê-lo. Aqui vale null (sem ícone).",
+      "userAgent": null,
+      "userAgent_doc": "User-Agent próprio para este sistema (padrão: o do WebView). Aqui vale null (usa o do WebView).",
+      "usuario": {
+        "_doc": "Detecção de usuário por FORMULÁRIO: guarda o login digitado e só o confirma se a regra de sucesso passar. A senha nunca é lida.",
+        "tipo": "formulario",
+        "tipo_doc": "Tipo da detecção: endpoint, elemento, cookie, storage, js, url, titulo, resposta, formulario, requisicao ou cracha. 'usuario' pode ser um objeto ou uma LISTA de objetos (várias detecções no mesmo sistema).",
+        "seletor": "#nomeusuario",
+        "seletor_doc": "Seletor CSS do campo de usuário (opcional: sem ele o app procura o campo antes do campo de senha). Nunca aponte para a senha.",
+        "sucesso": {
+          "tipo": "url",
+          "regex": "/mail/(inbox|home)",
+          "espera": 15,
+          "espera_doc": "Segundos aguardando o sucesso antes de descartar a tentativa (padrão 10). Vale também quando o login recarrega a página."
+        },
+        "sucesso_doc": "Como saber que o login deu certo. 'tipo': 'senhaSumiu' (padrão: o campo de senha saiu da tela), 'url' (a página casa com 'regex'), 'elemento' (existe o 'seletor') ou 'endpoint' ('url' e 'campo' devolvem um valor). 'espera': segundos aguardando o sucesso antes de descartar a tentativa (padrão 10).",
+        "logout": { "tipo": "url", "regex": "/mail/login\\.html" },
+        "logout_doc": "Quando a página casa, é a tela de login/saída: ninguém está logado e o app registra o logout. 'tipo': 'url' (regex sobre o endereço) ou 'elemento' (seletor). Opcional."
+      },
+      "usuario_doc": "Cada login confirmado por formulario, requisicao ou cracha gera um evento 'login', mesmo que seja o mesmo usuário de antes."
+    },
+    {
+      "nome": "Sistema legado",
+      "urlInicial": "http://legado.exemplo.local:8080/",
+      "urlPermitida": "legado.exemplo.local:8080/*",
+      "permitirCopiarColar": true,
+      "permitirHttp": true,
+      "ordem": 2,
+      "grupo": "Trabalho",
+      "usuario": {
+        "tipo": "cracha",
+        "regex": "^\\d{6}$",
+        "regex_doc": "Formato aceito para a matrícula (expressão regular completa). Nos tipos de leitura é um filtro aplicado ao valor lido (usa o grupo 1, se houver).",
+        "crachaObrigatorio": true,
+        "crachaObrigatorio_doc": "true (padrão): sem identificação não abre o sistema. false permite pular.",
+        "limparNoTimeout": true,
+        "limparNoTimeout_doc": "true (padrão): quando o timeout de inatividade volta ao launcher, o usuário é desligado (aparelho compartilhado) e sai um evento de logout."
+      },
+      "usuario_doc": "Identificação por CRACHÁ: o app pergunta a matrícula (digitada ou lida pela câmera) ao abrir o sistema. A barra ganha um botão de pessoa para trocar de usuário."
+    },
+    {
+      "nome": "Consulta de preço",
+      "urlInicial": "https://precos.exemplo.com/consulta",
+      "urlPermitida": "precos.exemplo.com/*",
+      "ordem": 3,
+      "grupo": "Trabalho",
+      "hub": true,
+      "hub_doc": "true (padrão) mostra o item como cartão no hub; false o esconde do hub (útil para um item só flutuante).",
+      "flutuante": true,
+      "flutuante_doc": "true também (ou só) cria um botão flutuante que abre o sistema num popup (padrão false).",
+      "flutuanteObrigatorio": true,
+      "flutuanteObrigatorio_doc": "Com flutuante: true deixa o botão sempre ligado; false (padrão) deixa o usuário escolher na lista de botões flutuantes.",
+      "flutuanteTravado": true,
+      "flutuanteTravado_doc": "Com flutuante: true trava a posição do botão, sem arrastar (padrão false). A posição salva pelo usuário é ignorada.",
+      "flutuantePosicao": "inferior-direita",
+      "flutuantePosicao_doc": "Onde o botão travado fica: um canto ('inferior-direita' padrão, 'inferior-esquerda', 'superior-direita', 'superior-esquerda', 'meio-direita', 'meio-esquerda') ou {x, y} em fração (0 a 1). Vários botões travados sem posição se empilham no canto inferior direito.",
+      "usuario": {
+        "tipo": "endpoint",
+        "url": "/api/me",
+        "url_doc": "Endereço consultado com a sessão do usuário (relativo ao sistema ou completo). Sem sessão devolve 401/vazio, e então ninguém está logado. Em 'resposta' e 'requisicao' é um glob de host/caminho da chamada observada.",
+        "metodo": "GET",
+        "metodo_doc": "Método HTTP da consulta (padrão GET). Em 'requisicao' o padrão é POST.",
+        "campo": "login",
+        "campo_doc": "Caminho do login dentro do JSON, como a.b[0].c. Em 'requisicao' é o nome do campo de usuário no corpo enviado.",
+        "intervaloSegundos": 30,
+        "intervaloSegundos_doc": "Releitura periódica dos tipos de consulta (endpoint, elemento, cookie, storage, js, url, titulo), em segundos (padrão 15; 0 desliga). Além disso, relê logo depois de cliques e de Enter.",
+        "claim_doc": "Quando o valor lido é um JWT, o nome da informação dentro dele (ex.: preferred_username, email, sub). O token nunca sai da página. Chave não usada neste item.",
+        "envio_doc": "Para onde vai o resultado: 'evento' (na hora, como login/logout) ou 'telemetria' (só no ciclo da telemetria). Muda o padrão do tipo: formulario, requisicao, resposta e cracha são 'evento'; os de consulta contínua são 'telemetria'. Chave não usada neste item."
+      },
+      "usuario_doc": "Detecção por ENDPOINT: consulta o sistema com a sessão do usuário e extrai o login do JSON. É contínua: aparece na telemetria."
+    },
+    {
+      "nome": "Manual",
+      "urlInicial": "https://wiki.exemplo.com/manual",
+      "urlPermitida": "wiki.exemplo.com/*",
+      "hub": false,
+      "flutuante": true,
+      "flutuanteObrigatorio": false,
+      "flutuanteInicial": true,
+      "flutuanteInicial_doc": "Com flutuante opcional: true faz o botão já vir ligado na primeira vez que o item aparece na lista (padrão false). Depois manda a escolha do usuário; mudar o JSON não religa nem desliga o que ele escolheu."
+    },
+
+    {
+      "_doc": "Itens de exemplo de cada tipo de detecção de usuário. Todos usam urlPermitida exemplo.com/*.",
+      "nome": "Usuário: endpoint (JWT)",
+      "urlInicial": "https://exemplo.com/endpoint/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 10,
+      "usuario": { "tipo": "endpoint", "url": "/api/auth/token", "campo": "token", "claim": "preferred_username" },
+      "usuario_doc": "O endpoint devolve {token: JWT}; 'campo' pega o token e 'claim' extrai o login de dentro dele."
+    },
+    {
+      "nome": "Usuário: elemento",
+      "urlInicial": "https://exemplo.com/elemento/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 11,
+      "usuario": {
+        "tipo": "elemento",
+        "seletor": "#nome-usuario",
+        "atributo": "data-login",
+        "atributo_doc": "Em vez do texto do elemento, lê este atributo dele (opcional)."
+      },
+      "usuario_doc": "Lê um elemento da tela (seletor CSS). Sem 'atributo', usa o texto do elemento."
+    },
+    {
+      "nome": "Usuário: cookie (JWT)",
+      "urlInicial": "https://exemplo.com/cookie/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 12,
+      "usuario": {
+        "tipo": "cookie",
+        "nome": "token",
+        "nome_doc": "Nome do cookie (ou da chave, em 'storage'). O app lê também cookies HttpOnly, que a página não enxerga.",
+        "claim": "email"
+      },
+      "usuario_doc": "Lê o cookie 'nome' e extrai o login de dentro do JWT ('claim')."
+    },
+    {
+      "nome": "Usuário: storage",
+      "urlInicial": "https://exemplo.com/storage/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 13,
+      "usuario": {
+        "tipo": "storage",
+        "armazenamento": "local",
+        "armazenamento_doc": "'local' (localStorage, padrão) ou 'sessao' (sessionStorage).",
+        "nome": "auth",
+        "campo": "user.login"
+      },
+      "usuario_doc": "Lê a chave 'nome' do armazenamento do navegador; 'campo' entra no JSON guardado nela."
+    },
+    {
+      "nome": "Usuário: js",
+      "urlInicial": "https://exemplo.com/js/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 14,
+      "usuario": {
+        "tipo": "js",
+        "expressao": "window.APP && window.APP.user && window.APP.user.login",
+        "expressao_doc": "Expressão JavaScript avaliada na página; deve devolver o login. Executa código vindo do JSON (o JSON precisa ser confiável) e não funciona em páginas cuja política de segurança (CSP) bloqueia eval."
+      },
+      "usuario_doc": "Lê uma variável da própria página."
+    },
+    {
+      "nome": "Usuário: url",
+      "urlInicial": "https://exemplo.com/url/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 15,
+      "usuario": { "tipo": "url", "regex": "/u/([^/]+)/" },
+      "usuario_doc": "Extrai o login do endereço da página: o grupo 1 da expressão regular."
+    },
+    {
+      "nome": "Usuário: título",
+      "urlInicial": "https://exemplo.com/titulo/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 16,
+      "usuario": { "tipo": "titulo", "regex": "^Painel de (.+)$" },
+      "usuario_doc": "Extrai o login do título da página: o grupo 1 da expressão regular."
+    },
+    {
+      "nome": "Usuário: resposta (corpo)",
+      "urlInicial": "https://exemplo.com/resposta/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 17,
+      "usuario": {
+        "tipo": "resposta",
+        "url": "exemplo.com/api/me",
+        "metodo": "GET",
+        "campo": "usuario.login"
+      },
+      "usuario_doc": "Observa uma chamada que a página já faz (fetch/XHR) e extrai o login da resposta. Gera evento."
+    },
+    {
+      "nome": "Usuário: resposta (chamada de login)",
+      "urlInicial": "https://exemplo.com/resposta-login/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 17,
+      "usuario": {
+        "tipo": "resposta",
+        "url": "exemplo.com/api/login",
+        "metodo": "POST",
+        "campo": "usuario.login",
+        "repetir": true,
+        "repetir_doc": "true diz que a chamada observada É a de login: cada resposta conta como um novo login, mesmo do mesmo usuário, e gera um evento (padrão false). Só vale em 'resposta'. Sem isso, a 'resposta' não repete o evento enquanto o login for o mesmo."
+      },
+      "usuario_doc": "Igual ao anterior, mas observa a chamada de LOGIN e repete o evento a cada login."
+    },
+    {
+      "nome": "Usuário: resposta (cabeçalho)",
+      "urlInicial": "https://exemplo.com/resposta-cabecalho/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 18,
+      "usuario": {
+        "tipo": "resposta",
+        "url": "exemplo.com/api/*",
+        "cabecalho": "X-Usuario",
+        "cabecalho_doc": "Lê o login deste cabeçalho da resposta, em vez do corpo (só em 'resposta')."
+      },
+      "usuario_doc": "Igual ao anterior, mas o login vem num cabeçalho de resposta."
+    },
+    {
+      "nome": "Usuário: formulário (por URL)",
+      "urlInicial": "https://exemplo.com/formulario/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 19,
+      "usuario": {
+        "tipo": "formulario",
+        "seletor": "#login",
+        "sucesso": { "tipo": "url", "regex": "/home", "espera": 10 }
+      },
+      "usuario_doc": "Formulário com sucesso confirmado quando a página vai para /home."
+    },
+    {
+      "nome": "Usuário: formulário (por elemento)",
+      "urlInicial": "https://exemplo.com/formulario-elemento/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 20,
+      "usuario": {
+        "tipo": "formulario",
+        "sucesso": { "tipo": "elemento", "seletor": "#menu-principal", "espera": 10 },
+        "logout": {
+          "tipo": "elemento",
+          "seletor": "#tela-login",
+          "seletor_doc": "Em logout do tipo 'elemento': seletor CSS de um elemento que só existe na tela de login/saída. Quando ele aparece, o app registra o logout."
+        }
+      },
+      "usuario_doc": "Formulário (campo de usuário detectado sozinho) com sucesso confirmado quando aparece o elemento #menu-principal e logout quando aparece o elemento #tela-login."
+    },
+    {
+      "nome": "Usuário: formulário (confirma por endpoint)",
+      "urlInicial": "https://exemplo.com/formulario-endpoint/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 21,
+      "usuario": {
+        "tipo": "formulario",
+        "sucesso": { "tipo": "endpoint", "url": "/api/me", "campo": "login", "espera": 10 }
+      },
+      "usuario_doc": "Formulário com sucesso confirmado quando /api/me passa a devolver um login."
+    },
+    {
+      "nome": "Usuário: requisição de login",
+      "urlInicial": "https://exemplo.com/requisicao/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 22,
+      "usuario": {
+        "tipo": "requisicao",
+        "url": "exemplo.com/api/login",
+        "metodo": "POST",
+        "campo": "username",
+        "sucesso": {
+          "status": [200],
+          "status_doc": "Códigos HTTP aceitos como login bem-sucedido (padrão: qualquer 2xx).",
+          "campo": "token"
+        },
+        "sucesso_doc": "Em 'requisicao': 'status' é a lista de códigos HTTP aceitos (padrão qualquer 2xx) e 'campo' é um caminho que precisa existir na resposta."
+      },
+      "usuario_doc": "Intercepta a chamada de login (fetch/XHR) e lê só o campo 'username' do corpo enviado; a senha é descartada. O login só vale se a resposta confirmar."
+    },
+    {
+      "nome": "Usuário: várias detecções",
+      "urlInicial": "https://exemplo.com/varias/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 24,
+      "usuario": [
+        { "tipo": "formulario", "seletor": "#usuario", "sucesso": { "tipo": "senhaSumiu", "espera": 10 } },
+        { "tipo": "cookie", "nome": "token", "claim": "email" },
+        { "tipo": "elemento", "seletor": "#nome-usuario", "envio": "evento" }
+      ],
+      "usuario_doc": "VÁRIAS detecções no mesmo sistema: 'usuario' é uma lista. Cada uma funciona sozinha e tem o seu usuário. A terceira usa 'envio': 'evento' para mandar evento mesmo sendo uma detecção de consulta."
+    },
+    {
+      "nome": "Usuário: crachá (opcional)",
+      "urlInicial": "https://exemplo.com/cracha/",
+      "urlPermitida": "exemplo.com/*",
+      "grupo": "Exemplos de detecção de usuário",
+      "ordem": 25,
+      "usuario": { "tipo": "cracha", "crachaObrigatorio": false, "limparNoTimeout": false },
+      "usuario_doc": "Crachá opcional (dá para pular) e que não é desligado pelo timeout."
+    }
+  ],
+  "apps_doc": "Lista de sistemas. Cada item tem nome e urlInicial (obrigatórios); todo o resto é opcional. Aparece no hub (hub, padrão true) e/ou como botão flutuante (flutuante)."
+}

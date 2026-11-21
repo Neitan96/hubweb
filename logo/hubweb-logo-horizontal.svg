@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 108" width="840" height="216" role="img" aria-label="HubWeb">
+  <title>HubWeb</title>
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1A237E"/>
+      <stop offset="0.55" stop-color="#1976D2"/>
+      <stop offset="1" stop-color="#26C6DA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ícone -->
+  <rect width="108" height="108" rx="24" fill="url(#fundo)"/>
+  <path d="M54,27 L77.38,40.5 L77.38,67.5 L54,81 L30.62,67.5 L30.62,40.5 Z"
+        fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.6" stroke-linejoin="round"/>
+  <g stroke="#fff" stroke-width="2.6" stroke-linecap="round">
+    <line x1="54" y1="44" x2="54" y2="32"/>
+    <line x1="62.66" y1="49" x2="73.05" y2="43"/>
+    <line x1="62.66" y1="59" x2="73.05" y2="65"/>
+    <line x1="54" y1="64" x2="54" y2="76"/>
+    <line x1="45.34" y1="59" x2="34.95" y2="65"/>
+    <line x1="45.34" y1="49" x2="34.95" y2="43"/>
+  </g>
+  <circle cx="54" cy="27" r="5" fill="#FFCA28"/>
+  <g fill="#fff">
+    <circle cx="77.38" cy="40.5" r="5"/>
+    <circle cx="77.38" cy="67.5" r="5"/>
+    <circle cx="54" cy="81" r="5"/>
+    <circle cx="30.62" cy="67.5" r="5"/>
+    <circle cx="30.62" cy="40.5" r="5"/>
+  </g>
+  <path fill="#fff" fill-rule="evenodd"
+        d="M45.5,54 a8.5,8.5 0 1,0 17,0 a8.5,8.5 0 1,0 -17,0 Z M50.4,54 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0 Z"/>
+
+  <!-- nome: "Hub" em índigo e "Web" em azul; a fonte do sistema (sans-serif) evita depender de fonte instalada -->
+  <text x="128" y="72" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-1">
+    <tspan fill="#1A237E">Hub</tspan><tspan fill="#1976D2">Web</tspan>
+  </text>
+</svg>
