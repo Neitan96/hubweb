@@ -1,0 +1,88 @@
+# Gera o release assinado quando uma tag "vX.Y.Z" é enviada, e o publica no GitHub com o APK anexado.
+#
+# Segredos necessários (Settings > Secrets and variables > Actions):
+#   KEYSTORE_BASE64    o hubweb-release.jks em base64
+#   KEYSTORE_PASSWORD  senha do arquivo (storePassword)
+#   KEY_ALIAS          alias da chave
+#   KEY_PASSWORD       senha da chave (keyPassword)
+#
+# Uso: suba versionCode/versionName em app/build.gradle.kts, faça o commit e rode:
+#   git tag v1.0.4 && git push origin v1.0.4
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir a tag com o versionName
+        id: versao
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          NO_GRADLE=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          if [ "$VER" != "$NO_GRADLE" ]; then
+            echo "A tag $GITHUB_REF_NAME não bate com o versionName ($NO_GRADLE) de app/build.gradle.kts."
+            exit 1
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Preparar a chave de assinatura
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "Segredo KEYSTORE_BASE64 ausente."; exit 1; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/hubweb-release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/hubweb-release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Compilar (release assinado)
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Conferir a assinatura e nomear o APK
+        id: apk
+        run: |
+          APK_ORIG=$(ls "app/build/outputs/apk/release/HubWeb ${{ steps.versao.outputs.ver }}.apk")
+          APK="HubWeb-${{ steps.versao.outputs.ver }}.apk"
+          cp "$APK_ORIG" "$APK"
+          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$APK" | head -3
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar o release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "**SHA-256 do APK:** \`${{ steps.apk.outputs.sha }}\`"
+            echo
+            echo "Link de download: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ steps.apk.outputs.apk }}"
+            echo
+          } > notas.md
+          gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.apk }}" \
+            --title "HubWeb ${{ steps.versao.outputs.ver }}" \
+            --notes-file notas.md --generate-notes

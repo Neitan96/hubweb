@@ -713,6 +713,8 @@ APK em `app/build/outputs/apk/debug/HubWeb <versão> debug.apk`.
 
 **Versão:** suba `versionCode` e `versionName` em `app/build.gradle.kts` a cada APK que for distribuir.
 
+**Release automático (GitHub Actions):** o workflow `.github/workflows/release.yml` compila, assina e publica o release quando você envia uma tag `vX.Y.Z` (ela precisa ser igual ao `versionName`). Cadastre antes, em *Settings → Secrets and variables → Actions*, os segredos `KEYSTORE_BASE64` (o `.jks` em base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS` e `KEY_PASSWORD`. Depois: suba a versão, faça o commit e rode `git tag v1.0.4 && git push origin v1.0.4`. O release sai com o `HubWeb-<versão>.apk` e o SHA-256 na descrição, que são os dados do bloco `atualizacaoApp`. O workflow `build.yml` valida os JSON de exemplo e compila o debug a cada push e pull request.
+
 Este README e os exemplos (`exemplo-apps.json`, `exemplo-dicas.json`) são copiados para dentro do app a cada build; edite sempre os da raiz do projeto.
 
 ## Licença
