@@ -52,10 +52,20 @@ object UrlVars {
     )
 
     /** `{nome}` ou `{nome:argumento}` (o argumento só serve para `usuario` e `usuarioDesde`). */
-    private val REGEX = Regex("""\{([A-Za-z]+)(?::([^}]*))?}""")
+    // As chaves precisam de barra invertida: o regex do Android (ICU) rejeita "}" solta, e isso derrubava o app ao abrir.
+    // Lazy: um erro aqui nunca pode acontecer na inicialização do app.
+    private val REGEX by lazy { Regex("""\{([A-Za-z]+)(?::([^\}]*))?\}""") }
 
     fun resolve(url: String, ctx: Context, item: AppItem): String {
         if ('{' !in url) return url
+        return try {
+            resolverVariaveis(url, ctx, item)
+        } catch (_: Exception) {
+            DeviceInfo.resolveUrl(url, ctx) // sem as variáveis extras, mas a página inicial abre
+        }
+    }
+
+    private fun resolverVariaveis(url: String, ctx: Context, item: AppItem): String {
         val app = ctx.applicationContext
         val out = REGEX.replace(url) { m ->
             val nome = m.groupValues[1]
