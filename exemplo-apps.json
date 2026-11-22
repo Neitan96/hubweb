@@ -12,6 +12,8 @@
   "novoToken": "token-novo",
   "novoToken_doc": "OPCIONAL. Troca o token Bearer da lista guardado no aparelho. Pode vir sozinho (mantém a URL) ou junto de novaConfigUrl; o app testa a lista com o token novo antes de adotar. \"\" apaga o token. Não vale para o token definido pelo MDM.",
 
+  "motorPadrao": "webview",
+  "motorPadrao_doc": "OPCIONAL. Motor de navegação de todos os apps que não definem 'motor': 'webview' (padrão, o do Android) ou 'gecko' (Firefox embutido, na build sem Gecko, compilada com -PsemGecko, abre no webview). Cada app pode mudar o seu com o campo 'motor'.",
   "abrirAoEntrar": {
     "sistema": "Webmail",
     "sistema_doc": "OPCIONAL. Nome (o 'nome' de um item de 'apps') do sistema que o app abre sozinho ao entrar. Sem este bloco, o app fica no hub. Também aceita só o nome: \"abrirAoEntrar\": \"Webmail\". Se o nome não existir na lista, nada é aberto.",
@@ -186,6 +188,8 @@
       "leitorCamera_doc": "true põe na barra um botão que lê código de barras ou QR pela câmera e digita o código no campo focado da página, como um teclado (padrão false).",
       "leitorSufixo": "enter",
       "leitorSufixo_doc": "O que enviar depois do código lido: 'enter' (padrão), 'tab' ou '' (nada).",
+      "motor": "webview",
+      "motor_doc": "OPCIONAL. Motor deste app: 'webview' ou 'gecko' (Firefox embutido, nas builds -PsemGecko abre no webview). Vale mais que o 'motorPadrao' da raiz; sem ele vale o 'motorPadrao' (senão 'webview').",
       "recarregarAoMudar": true,
       "recarregarAoMudar_doc": "Se a urlInicial tem variáveis, volta a ela quando alguma mudar (usuário, rede, nome...). Ignora as que variam sempre (bateria, sinal, hora, posição...). Padrão true; false desliga.",
       "permitirUpload": false,

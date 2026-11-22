@@ -14,6 +14,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -359,30 +361,7 @@ fun BrowserScreen(
     /** Não nulo quando o item identifica o usuário por crachá: abre a troca de usuário. */
     onUser: (() -> Unit)? = null,
 ) {
-    // A barra já abre visível ou oculta conforme o item ("barra.visivel"); o usuário alterna pelo botão.
-    var barVisible by remember(entry.item.id) { mutableStateOf(entry.item.barraVisivel) }
-    Column(Modifier.fillMaxSize()) {
-        if (barVisible) {
-            Row(
-                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).height(44.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onLauncher) { Icon(Icons.Default.Menu, "Launcher") }
-                if (entry.item.barraVoltar) IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Voltar") }
-                if (entry.item.barraAtualizar) IconButton(onClick = onReload) { Icon(Icons.Default.Refresh, "Atualizar página") }
-                if (entry.item.barraInicio) IconButton(onClick = onHome) { Icon(Icons.Default.Home, "Página inicial") }
-                onScan?.let { scan ->
-                    IconButton(onClick = scan) { Icon(painterResource(R.drawable.ic_qr_scan), "Ler código com a câmera") }
-                }
-                onUser?.let { user ->
-                    IconButton(onClick = user) { Icon(Icons.Default.Person, "Trocar usuário") }
-                }
-                Text(entry.item.nome, Modifier.weight(1f).padding(horizontal = 8.dp), maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                IconButton(onClick = { barVisible = false }) { Icon(Icons.Default.KeyboardArrowUp, "Esconder barra") }
-            }
-        }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+    TelaComBarra(entry.item, onLauncher, onBack, onReload, onHome, onScan, onUser) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { FrameLayout(it) },
@@ -412,14 +391,64 @@ fun BrowserScreen(
                     TextButton(onClick = onLauncher) { Text("Voltar ao launcher") }
                 }
             }
+    }
+}
+
+/**
+ * Tela de um sistema com a barra do HubWeb (launcher, voltar, atualizar, início, leitor, usuário), igual para o WebView e
+ * para o Gecko. A barra segue o item: `barra.visivel` (já abre visível ou oculta; o usuário alterna pelo botão),
+ * `barra.voltar/atualizar/inicio` e `barra.posicao` ("topo", padrão, ou "baixo"). [conteudo] é a página.
+ */
+@Composable
+fun TelaComBarra(
+    item: AppItem,
+    onLauncher: () -> Unit,
+    onBack: () -> Unit,
+    onReload: () -> Unit,
+    onHome: () -> Unit,
+    onScan: (() -> Unit)? = null,
+    onUser: (() -> Unit)? = null,
+    conteudo: @Composable BoxScope.() -> Unit,
+) {
+    var barVisible by remember(item.id) { mutableStateOf(item.barraVisivel) }
+    val embaixo = item.barraPosicao == "baixo"
+    val barra: @Composable () -> Unit = {
+        if (barVisible) {
+            Row(
+                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).height(44.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onLauncher) { Icon(Icons.Default.Menu, "Launcher") }
+                if (item.barraVoltar) IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Voltar") }
+                if (item.barraAtualizar) IconButton(onClick = onReload) { Icon(Icons.Default.Refresh, "Atualizar página") }
+                if (item.barraInicio) IconButton(onClick = onHome) { Icon(Icons.Default.Home, "Página inicial") }
+                onScan?.let { scan ->
+                    IconButton(onClick = scan) { Icon(painterResource(R.drawable.ic_qr_scan), "Ler código com a câmera") }
+                }
+                onUser?.let { user ->
+                    IconButton(onClick = user) { Icon(Icons.Default.Person, "Trocar usuário") }
+                }
+                Text(item.nome, Modifier.weight(1f).padding(horizontal = 8.dp), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                IconButton(onClick = { barVisible = false }) {
+                    Icon(if (embaixo) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp, "Esconder barra")
+                }
+            }
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        if (!embaixo) barra()
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            conteudo()
             if (!barVisible) {
                 IconButton(
                     onClick = { barVisible = true },
-                    modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
+                    modifier = Modifier.align(if (embaixo) Alignment.BottomEnd else Alignment.TopEnd).size(32.dp)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), CircleShape),
                 ) { Icon(Icons.Default.Menu, "Mostrar barra", Modifier.size(18.dp)) }
             }
         }
+        if (embaixo) barra()
     }
 }
 

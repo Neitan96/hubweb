@@ -17,6 +17,9 @@ val empProps = Properties().apply {
         f.inputStream().use { load(it) }
     }
 }
+// O motor GeckoView (Firefox) vai em todas as builds (~50 MB a mais), para aparelhos com WebView antigo demais.
+// Com -PsemGecko o app sai sem ele, menor (a pasta semgecko tem um substituto vazio).
+val gecko = !project.hasProperty("semGecko")
 fun String.paraBuildConfig() = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 // Documentação exibida no app (Configurações → Documentação / Exemplo de JSON): copia o README e o
@@ -44,8 +47,8 @@ android {
         applicationId = "br.com.hubweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.0.14"
+        versionCode = 17
+        versionName = "1.0.16"
         buildConfigField("String", "EMPRESA_URL", (empProps.getProperty("configUrl") ?: "").trim().paraBuildConfig())
         buildConfigField("String", "EMPRESA_TOKEN", (empProps.getProperty("token") ?: "").trim().paraBuildConfig())
     }
@@ -58,6 +61,7 @@ android {
                 listOfNotNull(
                     "HubWeb ${variant.versionName}",
                     empProps.getProperty("sufixo")?.trim()?.takeIf { empresa && it.isNotEmpty() },
+                    "semgecko".takeIf { !gecko },
                     variant.buildType.name.takeIf { it != "release" },
                 ).joinToString(" ") + ".apk"
         }
@@ -87,6 +91,9 @@ android {
         buildConfig = true
     }
 
+    sourceSets.getByName("main").java.srcDir(if (gecko) "src/gecko/java" else "src/semgecko/java")
+    if (gecko) packaging { jniLibs { useLegacyPackaging = true } }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -107,4 +114,6 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     // Leitor de códigos de barras e QR pela câmera (ZXing, Apache 2.0; funciona offline)
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    // Motor Firefox (some com -PsemGecko). Só arm64-v8a por enquanto (os coletores e celulares atuais); mantém o APK menor.
+    if (gecko) implementation("org.mozilla.geckoview:geckoview-arm64-v8a:139.0.20250609112858")
 }

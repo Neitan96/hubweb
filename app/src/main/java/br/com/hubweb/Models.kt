@@ -72,6 +72,8 @@ data class AppItem(
     val barraVoltar: Boolean = true,
     val barraAtualizar: Boolean = true,
     val barraInicio: Boolean = true,
+    /** Onde fica a barra: "topo" (padrão) ou "baixo". */
+    val barraPosicao: String = "topo",
     /** Botão flutuante travado: não pode ser arrastado e fica em `flutuantePosicao` (padrão: canto inferior direito). */
     val flutuanteTravado: Boolean = false,
     val flutuantePosicao: PosicaoFab? = null,
@@ -89,6 +91,8 @@ data class AppItem(
     val obrigatorio: Boolean = false,
     /** Se a urlInicial tem variáveis (usuário, rede, nome do aparelho...), volta à urlInicial quando uma delas muda (as que mudam o tempo todo são ignoradas). */
     val recarregarAoMudar: Boolean = true,
+    /** Motor de navegação: "webview" (padrão, o do Android) ou "gecko" (Firefox embutido; só nas builds com GeckoView). */
+    val motor: String = "webview",
 ) {
     val id: String get() = "$nome|$urlInicial"
 

@@ -483,9 +483,11 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
         fun parseConfig(text: String): Config {
             val t = text.trim().removePrefix("﻿")
             val root = if (t.startsWith("[")) null else JSONObject(t)
-            val apps = parseApps(root?.getJSONArray("apps") ?: JSONArray(t))
+            // "motorPadrao" (raiz): motor de todos os apps que não definem "motor" ("webview" ou "gecko").
+            val motorPadrao = if (root?.str("motorPadrao")?.trim()?.lowercase() == "gecko") "gecko" else "webview"
+            val apps = parseApps(root?.getJSONArray("apps") ?: JSONArray(t), motorPadrao = motorPadrao)
             // Formato antigo: array "flutuantes" na raiz (itens só flutuantes). Ainda aceito.
-            val legados = root?.optJSONArray("flutuantes")?.let { parseApps(it, legado = true) }.orEmpty()
+            val legados = root?.optJSONArray("flutuantes")?.let { parseApps(it, legado = true, motorPadrao = motorPadrao) }.orEmpty()
             return finishConfig(root, (apps + legados).distinctBy { it.id })
         }
 
@@ -493,7 +495,7 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
          * Itens de "apps". Cada um aparece no hub (`hub`, padrão true) e/ou como botão flutuante
          * (`flutuante`, padrão false); `flutuanteObrigatorio` trava o botão ligado.
          */
-        private fun parseApps(arr: JSONArray, legado: Boolean = false): List<AppItem> {
+        private fun parseApps(arr: JSONArray, legado: Boolean = false, motorPadrao: String = "webview"): List<AppItem> {
             val out = ArrayList<AppItem>()
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
@@ -527,6 +529,10 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
                     barraVoltar = o.optJSONObject("barra")?.bool("voltar", true) ?: true,
                     barraAtualizar = o.optJSONObject("barra")?.bool("atualizar", true) ?: true,
                     barraInicio = o.optJSONObject("barra")?.bool("inicio", true) ?: true,
+                    barraPosicao = when (o.optJSONObject("barra")?.str("posicao")?.trim()?.lowercase()) {
+                        "baixo", "embaixo", "bottom", "inferior" -> "baixo"
+                        else -> "topo"
+                    },
                     flutuanteInicial = o.bool("flutuanteInicial", false),
                     flutuanteTravado = o.bool("flutuanteTravado", false),
                     flutuantePosicao = parsePosicao(o.opt("flutuantePosicao")),
@@ -540,6 +546,12 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
                     flutuante = if (legado) true else o.bool("flutuante", false),
                     obrigatorio = o.bool("flutuanteObrigatorio", o.bool("obrigatorio", false)),
                     recarregarAoMudar = o.bool("recarregarAoMudar", true),
+                    // O "motor" do app vale mais que o "motorPadrao" da raiz.
+                    motor = when (o.str("motor")?.trim()?.lowercase()) {
+                        "gecko" -> "gecko"
+                        "webview" -> "webview"
+                        else -> motorPadrao
+                    },
                 )
             }
             return out.distinctBy { it.id }

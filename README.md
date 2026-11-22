@@ -92,6 +92,8 @@ Campos de cada item de `apps`:
 | `barra` | não | tudo visível | Objeto com `visivel`, `voltar`, `atualizar` e `inicio`: barra já aberta ou oculta e quais botões ela tem (veja "Personalização do hub e da barra dos sistemas") |
 | `leitorCamera` | não | `false` | Mostra na barra do item um botão para ler código de barras/QR pela câmera (veja "Leitor de código pela câmera") |
 | `leitorSufixo` | não | `"enter"` | O que enviar depois do código: `"enter"`, `"tab"` ou `""` (nada) |
+| `motor` | não | `motorPadrao` da raiz (senão `"webview"`) | **Protótipo.** O `motorPadrao` (campo `"motorPadrao": "gecko"` na raiz do JSON) vale para todos os apps; o `motor` do app vence. `"gecko"` abre o sistema no Firefox embutido (GeckoView), para aparelhos cujo WebView do sistema é antigo demais. O Gecko vai em todas as builds (APK ~50 MB maior; só arm64: em outros aparelhos, ou numa build `gradlew assembleRelease -PsemGecko`, o item abre no WebView normal). Por enquanto o Gecko só navega (voltar, atualizar, início): sem detecção de usuário, leitor de código, upload, download nem câmera |
+| `barra.posicao` | não | `"topo"` | Onde fica a barra do sistema (launcher, voltar, atualizar, início): `"topo"` ou `"baixo"`. Igual no WebView e no Gecko (junto de `barra.visivel`, `barra.voltar`, `barra.atualizar`, `barra.inicio`) |
 | `recarregarAoMudar` | não | `true` | Se a `urlInicial` tem variáveis (`{usuario}`, `{ssid}`, `{nome}`, `{versaoLista}`...), volta à `urlInicial` quando o valor de alguma delas muda. Variáveis que mudam o tempo todo (`bateria`, `carregando`, `sinalDbm`, `ramLivreMb`, `armazenamentoLivreMb`, `hora`, `data`, `lat`, `lon`, `sistemaAnterior`) são ignoradas na comparação. Verifica a cada 15 s. `false` desliga |
 
 ## Configurações do app

@@ -41,7 +41,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.math.abs
 
-enum class Screen { LAUNCHER, BROWSER, SETTINGS }
+enum class Screen { LAUNCHER, BROWSER, GECKO, SETTINGS }
 
 class MainActivity : ComponentActivity() {
 
@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
     private var screen by mutableStateOf(Screen.LAUNCHER)
     private var current by mutableStateOf<Entry?>(null)
+    private var geckoItem by mutableStateOf<AppItem?>(null) // sistema aberto no motor GeckoView (protótipo)
     private var calcEnabled by mutableStateOf(false)
     private var fabsOn by mutableStateOf<Set<String>>(emptySet())
     private var showFabDialog by mutableStateOf(false)
@@ -192,6 +193,7 @@ class MainActivity : ComponentActivity() {
                         val wv = current?.webView
                         if (wv != null && wv.canGoBack()) wv.goBack() else closeBrowser()
                     }
+                    Screen.GECKO -> if (!MotorGecko.voltar()) closeGecko()
                     Screen.SETTINGS -> screen = Screen.LAUNCHER
                     Screen.LAUNCHER -> if (!prefs.kiosk) finish()
                 }
@@ -254,6 +256,7 @@ class MainActivity : ComponentActivity() {
                                 onUser = if (crachaIndex(e.item) >= 0) ({ askCracha(e.item) }) else null,
                             )
                         }
+                        Screen.GECKO -> geckoItem?.let { MotorGecko.Tela(it, it.startUrl(this@MainActivity), ::closeGecko) }
                         Screen.SETTINGS -> SettingsScreen(
                             prefs = prefs,
                             repo = repo,
@@ -402,6 +405,7 @@ class MainActivity : ComponentActivity() {
             if (min > 0 && idleMs > min * 60_000L) {
                 tracker.onTimeout(repo.items) // aparelho compartilhado: desliga os usuários por crachá
                 if (screen == Screen.BROWSER) closeBrowser()
+                else if (screen == Screen.GECKO) closeGecko()
                 else if (screen == Screen.SETTINGS) screen = Screen.LAUNCHER
             }
             runCatching { pool.verificarMudancas() } // urlInicial com variáveis que mudaram: volta à página inicial
@@ -530,6 +534,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openApp(item: AppItem, abrirEm: String? = null) {
+        // Motor GeckoView (protótipo): só nas builds que o incluem; nas demais o item abre no WebView normal.
+        if (item.motor == "gecko" && MotorGecko.disponivel) {
+            geckoItem = item
+            AppStats.abrirSistema(item.nome)
+            screen = Screen.GECKO
+            lastInput = SystemClock.elapsedRealtime()
+            return
+        }
         val e = pool.open(item, abrirEm)
         current = e
         AppStats.abrirSistema(item.nome)
@@ -542,6 +554,12 @@ class MainActivity : ComponentActivity() {
         lastInput = SystemClock.elapsedRealtime()
         pool.setActive(e)
         if (needsCracha(item)) askCracha(item)
+    }
+
+    private fun closeGecko() {
+        geckoItem = null
+        AppStats.fecharSistema()
+        screen = Screen.LAUNCHER
     }
 
     private fun closeBrowser() {

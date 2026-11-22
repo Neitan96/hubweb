@@ -16,8 +16,8 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 
 # Chaves que o app lê, por bloco. "legado" = aceitas só por compatibilidade (não precisam estar no exemplo).
 $esperado = @{
-  'raiz'              = @('abrirAoEntrar','novaConfigUrl','novoToken','timeoutInatividadeMinutos','sistemasAbertos','apps','fundoUrl','rodape','senhaSha256','senha','modoKiosk','aparencia','dicas','atualizacao','telemetria','eventos','calculadora')
-  'apps[]'            = @('nome','urlInicial','urlPermitida','icone','userAgent','permitirCopiarColar','permitirHttp','ordem','grupo','orientacao','zoom','permitirCamera','permitirUpload','permitirDownload','leitorCamera','leitorSufixo','barra','usuario','hub','flutuante','flutuanteObrigatorio','flutuanteInicial','flutuanteTravado','flutuantePosicao','recarregarAoMudar')
+  'raiz'              = @('motorPadrao','abrirAoEntrar','novaConfigUrl','novoToken','timeoutInatividadeMinutos','sistemasAbertos','apps','fundoUrl','rodape','senhaSha256','senha','modoKiosk','aparencia','dicas','atualizacao','telemetria','eventos','calculadora')
+  'apps[]'            = @('nome','urlInicial','urlPermitida','icone','userAgent','permitirCopiarColar','permitirHttp','ordem','grupo','orientacao','zoom','permitirCamera','permitirUpload','permitirDownload','leitorCamera','leitorSufixo','barra','usuario','hub','flutuante','flutuanteObrigatorio','flutuanteInicial','flutuanteTravado','flutuantePosicao','recarregarAoMudar','motor')
   'sistemasAbertos[]' = @('ramMinimaMb','quantidade')
   'abrirAoEntrar'     = @('sistema','url','quando')
   'barra'             = @('visivel','voltar','atualizar','inicio')
