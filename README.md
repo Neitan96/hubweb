@@ -99,6 +99,19 @@ Campos de cada item de `apps`:
 - Modo kiosk (padrão desligado)
 - Alterar senha / Encerrar o HubWeb
 
+## Trocar a URL ou o token da lista
+Dois campos opcionais na raiz do JSON mudam a configuração guardada nos aparelhos, sem mexer em cada um:
+
+```json
+"novaConfigUrl": "https://exemplo.com/hubweb/apps-novo.json",
+"novoToken": "token-novo"
+```
+
+- **`novaConfigUrl`**: nova URL (http ou https) da lista. **`novoToken`**: novo token Bearer (`""` apaga o token). Pode vir um só ou os dois.
+- **Antes de adotar, o app confere:** busca a lista com a URL e o token novos; só se ela abrir e for um JSON válido os valores são gravados (e essa lista passa a valer). Se falhar, o aparelho continua com os atuais e tenta de novo na próxima busca. Assim um valor errado não deixa o aparelho sem acesso.
+- **Como migrar:** deixe o campo na lista antiga até todos os aparelhos buscarem; depois retire. Aparelho que ficar desligado nesse período precisa de acesso à lista antiga ao ligar.
+- **Não vale** para URL ou token definidos pelo MDM (configuração gerenciada): esses mandam e só mudam no MDM.
+
 ## Inatividade e sistemas abertos (por RAM)
 Dois limites vêm da lista, na raiz do JSON:
 

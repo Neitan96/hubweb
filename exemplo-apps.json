@@ -7,6 +7,11 @@
   "fundoUrl": "https://exemplo.com/hubweb/fundo.png",
   "fundoUrl_doc": "Imagem de plano de fundo do hub (URL http ou https; PNG, JPG ou WebP; até 15 MB). Fica centralizada e nunca é ampliada. É baixada uma vez e guardada no aparelho; só baixa de novo se a URL mudar. Sem esta chave, o fundo é removido.",
 
+  "novaConfigUrl": "https://exemplo.com/hubweb/apps-novo.json",
+  "novaConfigUrl_doc": "OPCIONAL. Troca a URL da lista guardada no aparelho (http ou https). Útil para mudar o endereço do JSON sem mexer em cada aparelho: deixe este campo na lista antiga até todos migrarem. O app só adota a URL nova se a lista abrir nela e for um JSON válido; senão continua na atual. Não vale para a URL definida pelo MDM (configuração gerenciada). Retire o campo depois que todos trocarem.",
+  "novoToken": "token-novo",
+  "novoToken_doc": "OPCIONAL. Troca o token Bearer da lista guardado no aparelho. Pode vir sozinho (mantém a URL) ou junto de novaConfigUrl; o app testa a lista com o token novo antes de adotar. \"\" apaga o token. Não vale para o token definido pelo MDM.",
+
   "timeoutInatividadeMinutos": 30,
   "timeoutInatividadeMinutos_doc": "Minutos sem toque nem tecla (o leitor em modo teclado conta) até o app voltar ao launcher; também desliga os usuários por crachá. 0 desliga o timeout. De 0 a 1440; padrão 30 quando a chave não existe.",
 

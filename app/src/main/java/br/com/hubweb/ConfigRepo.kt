@@ -122,6 +122,10 @@ class Config(
     val timeoutInatividadeMin: Int? = null,
     /** Faixas de RAM para a quantidade de sistemas abertos; null = a lista não define (vale 2). */
     val sistemasAbertos: List<FaixaRam>? = null,
+    /** Nova URL da lista (http/https); null = não troca. */
+    val novaConfigUrl: String? = null,
+    /** Novo token da lista; null = não troca, "" = apaga o token. */
+    val novoToken: String? = null,
 )
 
 /**
@@ -243,14 +247,23 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             if (atraso > 0) try { Thread.sleep(atraso) } catch (_: InterruptedException) {}
             main.post { agendado = false; loading = true }
             try {
-                val text = fetch(url, token)
-                val cfg = parseConfig(text) // lança exceção se inválido: o cache antigo fica
+                var text = fetch(url, token)
+                var cfg = parseConfig(text) // lança exceção se inválido: o cache antigo fica
+                // A lista pode mandar trocar a URL e/ou o token: só vale se a lista nova abrir com os valores novos.
+                val troca = tentarTroca(cfg, url, token)
+                if (troca != null) { text = troca.text; cfg = troca.cfg }
                 val tmp = File(file.parentFile, "apps.json.tmp")
                 tmp.writeText(text)
                 if (!tmp.renameTo(file)) {
                     file.delete(); tmp.renameTo(file)
                 }
+                val novaCfg = cfg
                 main.post {
+                    if (troca != null) {
+                        prefs.configUrl = troca.url
+                        prefs.token = troca.token
+                    }
+                    val cfg = novaCfg
                     items = cfg.items
                     floating = cfg.items.filter { it.flutuante }
                     rodape = cfg.rodape
@@ -260,7 +273,7 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
                     aparencia = cfg.aparencia ?: Aparencia()
                     dicas = cfg.dicas
                     atualizacao = cfg.atualizacao ?: Atualizacao()
-            aplicarLimites(cfg)
+                    aplicarLimites(cfg)
                     lastUpdate = System.currentTimeMillis()
                     error = null
                     loading = false
@@ -281,6 +294,25 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             }
         }
     }
+    private class Troca(val url: String, val token: String, val text: String, val cfg: Config)
+
+    /**
+     * `novaConfigUrl` e `novoToken` da lista: trocam a URL e/ou o token guardados no aparelho. Antes de adotar, busca a
+     * lista com os valores novos; se não abrir (ou não for um JSON válido), nada muda e o aparelho segue com os atuais
+     * (evita perder o acesso por um valor errado). Valores vindos do MDM não são trocados. Retorna null sem troca.
+     */
+    private fun tentarTroca(cfg: Config, url: String, token: String): Troca? {
+        val nu = if (prefs.urlGerenciada) url else cfg.novaConfigUrl ?: url
+        val nt = if (prefs.tokenGerenciado) token else cfg.novoToken ?: token
+        if (nu == url && nt == token) return null
+        return try {
+            val t = fetch(nu, nt)
+            Troca(nu, nt, t, parseConfig(t))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun fetch(url: String, token: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         try {
@@ -654,7 +686,10 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
                 is Number -> listOf(FaixaRam(0, v.toInt().coerceIn(1, 6)))
                 else -> null
             }
-            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, timeoutInatividade, sistemasAbertos)
+            // "novaConfigUrl" / "novoToken": trocam a URL e o token que o aparelho usa para buscar esta lista.
+            val novaUrl = root?.str("novaConfigUrl")?.trim()?.takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
+            val novoToken = if (root != null && root.has("novoToken") && !root.isNull("novoToken")) root.optString("novoToken").trim() else null
+            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, timeoutInatividade, sistemasAbertos, novaUrl, novoToken)
         }
 
         private fun JSONObject.str(k: String): String? = if (isNull(k)) null else optString(k)
