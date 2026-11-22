@@ -35,6 +35,9 @@ class Entry(val item: AppItem) {
 
     /** A primeira página já terminou de carregar desde que este sistema foi aberto. */
     var firstLoadDone by mutableStateOf(false)
+
+    /** A urlInicial (só variáveis estáveis) no último carregamento; mudou = volta à página inicial. */
+    var chave: String? = null
 }
 
 /**
@@ -75,6 +78,21 @@ class WebPool(
             destroy(oldest)
         }
         return e
+    }
+
+    /**
+     * Para cada sistema com `recarregarAoMudar`: se alguma variável estável da urlInicial mudou (usuário, rede, nome...),
+     * volta à urlInicial com os valores novos. Chamado a cada 15 s e ao voltar ao app.
+     */
+    fun verificarMudancas() {
+        (entries.values + popups.values).forEach { e ->
+            if (!e.item.recarregarAoMudar) return@forEach
+            val nova = UrlVars.chaveEstavel(e.item, activity) ?: return@forEach
+            if (nova == e.chave) return@forEach
+            e.chave = nova
+            val url = e.item.startUrl(activity)
+            if (e.item.schemeAllowed(Uri.parse(url))) e.webView.loadUrl(url)
+        }
     }
 
     /** Sistemas na memória e o estado de cada um (telemetria): carregando, primeira carga feita e último erro. */
@@ -258,6 +276,7 @@ class WebPool(
             }
         })
 
+        entry.chave = UrlVars.chaveEstavel(item, activity)
         val startUrl = abrirEm ?: item.startUrl(activity) // aplica {nome}, {ip}, ... da urlInicial
         if (item.schemeAllowed(Uri.parse(startUrl))) wv.loadUrl(startUrl)
         else entry.error = "URL inicial usa HTTP, mas permitirHttp está desligado"

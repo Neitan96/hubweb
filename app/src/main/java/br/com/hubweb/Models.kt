@@ -87,6 +87,8 @@ data class AppItem(
     val flutuante: Boolean = false,
     /** Para itens flutuantes: true = botão sempre ligado (o usuário não pode desligar); false = o usuário escolhe. */
     val obrigatorio: Boolean = false,
+    /** Se a urlInicial tem variáveis (usuário, rede, nome do aparelho...), volta à urlInicial quando uma delas muda (as que mudam o tempo todo são ignoradas). */
+    val recarregarAoMudar: Boolean = true,
 ) {
     val id: String get() = "$nome|$urlInicial"
 

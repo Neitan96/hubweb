@@ -539,6 +539,7 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
                     hub = if (legado) false else o.bool("hub", true),
                     flutuante = if (legado) true else o.bool("flutuante", false),
                     obrigatorio = o.bool("flutuanteObrigatorio", o.bool("obrigatorio", false)),
+                    recarregarAoMudar = o.bool("recarregarAoMudar", true),
                 )
             }
             return out.distinctBy { it.id }

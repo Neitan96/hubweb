@@ -92,6 +92,7 @@ Campos de cada item de `apps`:
 | `barra` | não | tudo visível | Objeto com `visivel`, `voltar`, `atualizar` e `inicio`: barra já aberta ou oculta e quais botões ela tem (veja "Personalização do hub e da barra dos sistemas") |
 | `leitorCamera` | não | `false` | Mostra na barra do item um botão para ler código de barras/QR pela câmera (veja "Leitor de código pela câmera") |
 | `leitorSufixo` | não | `"enter"` | O que enviar depois do código: `"enter"`, `"tab"` ou `""` (nada) |
+| `recarregarAoMudar` | não | `true` | Se a `urlInicial` tem variáveis (`{usuario}`, `{ssid}`, `{nome}`, `{versaoLista}`...), volta à `urlInicial` quando o valor de alguma delas muda. Variáveis que mudam o tempo todo (`bateria`, `carregando`, `sinalDbm`, `ramLivreMb`, `armazenamentoLivreMb`, `hora`, `data`, `lat`, `lon`, `sistemaAnterior`) são ignoradas na comparação. Verifica a cada 15 s. `false` desliga |
 
 ## Configurações do app
 - URL do JSON e token (Bearer, enviado só por HTTPS)

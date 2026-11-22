@@ -403,6 +403,7 @@ class MainActivity : ComponentActivity() {
                 if (screen == Screen.BROWSER) closeBrowser()
                 else if (screen == Screen.SETTINGS) screen = Screen.LAUNCHER
             }
+            runCatching { pool.verificarMudancas() } // urlInicial com variáveis que mudaram: volta à página inicial
             handler.postDelayed(this, 15_000)
         }
     }

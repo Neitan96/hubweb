@@ -186,6 +186,8 @@
       "leitorCamera_doc": "true põe na barra um botão que lê código de barras ou QR pela câmera e digita o código no campo focado da página, como um teclado (padrão false).",
       "leitorSufixo": "enter",
       "leitorSufixo_doc": "O que enviar depois do código lido: 'enter' (padrão), 'tab' ou '' (nada).",
+      "recarregarAoMudar": true,
+      "recarregarAoMudar_doc": "Se a urlInicial tem variáveis, volta a ela quando alguma mudar (usuário, rede, nome...). Ignora as que variam sempre (bateria, sinal, hora, posição...). Padrão true; false desliga.",
       "permitirUpload": false,
       "permitirUpload_doc": "true libera o seletor de arquivos para envio (padrão false).",
       "permitirDownload": false,

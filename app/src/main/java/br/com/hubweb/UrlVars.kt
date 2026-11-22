@@ -56,6 +56,22 @@ object UrlVars {
     // Lazy: um erro aqui nunca pode acontecer na inicialização do app.
     private val REGEX by lazy { Regex("""\{([A-Za-z]+)(?::([^\}]*))?\}""") }
 
+    // Mudam o tempo todo: não contam para "recarregarAoMudar".
+    private val VOLATEIS = setOf(
+        "bateria", "carregando", "sinalDbm", "ramLivreMb", "armazenamentoLivreMb", "hora", "data", "lat", "lon", "sistemaAnterior",
+    )
+
+    /** A urlInicial resolvida só com as variáveis estáveis (as que mudam o tempo todo ficam vazias); serve para detectar mudança. */
+    fun chaveEstavel(item: AppItem, ctx: Context): String? {
+        if ('{' !in item.urlInicial) return null
+        return try {
+            val sem = REGEX.replace(item.urlInicial) { m -> if (m.groupValues[1] in VOLATEIS) "" else m.value }
+            resolve(sem, ctx, item)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     fun resolve(url: String, ctx: Context, item: AppItem): String {
         if ('{' !in url) return url
         return try {
