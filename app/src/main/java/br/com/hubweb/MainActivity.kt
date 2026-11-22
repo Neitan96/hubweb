@@ -143,6 +143,7 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(receiverMdm, filtroMdm, android.content.Context.RECEIVER_NOT_EXPORTED)
         else registerReceiver(receiverMdm, filtroMdm)
         tracker = UserTracker(prefs)
+        MotorGecko.tracker = tracker
         UrlVars.ligar(tracker, repo, prefs) // variáveis da urlInicial: {usuario}, {versaoLista}...
         pool = WebPool(this, prefs, tracker)
         telemetry = Telemetry(applicationContext, prefs, repo) {

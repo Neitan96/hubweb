@@ -36,7 +36,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import org.json.JSONArray
+import org.json.JSONObject
+import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
+import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
@@ -56,7 +63,14 @@ object MotorGecko {
         var podeVoltar by mutableStateOf(false)
     }
 
+    /** Quem recebe os usuários detectados (definido pela MainActivity). */
+    var tracker: UserTracker? = null
+
     private var runtime: GeckoRuntime? = null
+    private var extensao: WebExtension? = null
+    private var extensaoPronta = false
+    private val aguardando = ArrayList<() -> Unit>()
+    private val main = Handler(Looper.getMainLooper())
     private val sessoes = HashMap<String, Sessao>()
     private var atual: Sessao? = null
 
@@ -64,6 +78,45 @@ object MotorGecko {
         ctx.applicationContext,
         GeckoRuntimeSettings.Builder().remoteDebuggingEnabled(BuildConfig.DEBUG).build(),
     ).also { runtime = it }
+
+    /** Instala (uma vez) a extensão interna que detecta o usuário; quem chamar espera ela ficar pronta (ou falhar). */
+    private fun comExtensao(ctx: Context, acao: () -> Unit) {
+        if (extensaoPronta) { acao(); return }
+        val primeira = aguardando.isEmpty()
+        aguardando += acao
+        if (!primeira) return
+        fun liberar() {
+            extensaoPronta = true
+            val l = ArrayList(aguardando); aguardando.clear(); l.forEach { it() }
+        }
+        runtime(ctx).webExtensionController
+            .ensureBuiltIn("resource://android/assets/hubweb-ext/", "hubweb@hubweb.com.br")
+            .accept({ ext -> extensao = ext; liberar() }, { _ -> liberar() })
+    }
+
+    private fun delegado(item: AppItem) = object : WebExtension.MessageDelegate {
+        override fun onMessage(nativeApp: String, message: Any, sender: WebExtension.MessageSender): GeckoResult<Any>? {
+            val m = message as? JSONObject ?: return null
+            val href = m.optString("href")
+            if (!runCatching { item.allows(Uri.parse(href)) }.getOrDefault(false)) return null
+            when (m.optString("t")) {
+                "cfg" -> {
+                    val arr = JSONArray()
+                    item.usuarios.filter { it.tipo != "cracha" }.forEach { arr.put(JSONObject(it.json)) }
+                    return GeckoResult.fromValue(JSONObject().put("cfgs", arr) as Any)
+                }
+                "report" -> {
+                    val idx = m.optInt("idx", -1)
+                    val cfg = item.usuarios.getOrNull(idx) ?: return null
+                    val login = m.optString("user").trim().take(200)
+                    val origem = m.optString("fonte").ifEmpty { cfg.tipo }
+                    val novo = m.optBoolean("novo", false)
+                    main.post { tracker?.report(item, idx, login, origem, novo) }
+                }
+            }
+            return null
+        }
+    }
 
     // O popup (botão flutuante) tem sessão própria: o mesmo sistema pode estar aberto na tela e no popup ao mesmo tempo.
     private fun sessao(ctx: Context, item: AppItem, urlInicial: String, popup: Boolean = false): Sessao =
@@ -77,7 +130,11 @@ object MotorGecko {
             }
         }
         s.open(runtime(ctx))
-        s.loadUri(urlInicial)
+        // Só carrega a página depois que a extensão estiver instalada, para ela valer já na primeira página.
+        comExtensao(ctx) {
+            extensao?.let { s.webExtensionController.setMessageDelegate(it, delegado(item), "hubweb") }
+            s.loadUri(urlInicial)
+        }
         nova
     }
 

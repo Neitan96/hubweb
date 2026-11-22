@@ -20,6 +20,39 @@ val empProps = Properties().apply {
 // O motor GeckoView (Firefox) vai em todas as builds (~50 MB a mais), para aparelhos com WebView antigo demais.
 // Com -PsemGecko o app sai sem ele, menor (a pasta semgecko tem um substituto vazio).
 val gecko = !project.hasProperty("semGecko")
+
+// Extensão interna do Gecko (detecção de usuário nos sistemas abertos no Gecko): o main.js é o mesmo hubweb_user.js do
+// WebView, embrulhado para rodar na página e falar com o relay.js (que fala com o app). Gerado a cada build.
+val geckoExtDir = layout.buildDirectory.dir("generated/gecko-ext/assets/hubweb-ext")
+val gerarExtGecko by tasks.registering {
+    val origem = layout.projectDirectory.file("src/main/res/raw/hubweb_user.js")
+    inputs.file(origem)
+    outputs.dir(geckoExtDir)
+    doLast {
+        val dir = geckoExtDir.get().asFile.apply { mkdirs() }
+        var js = origem.asFile.readText(Charsets.UTF_8)
+        val ponte = "var B = { report: function (u, f, h, i, n) { window.postMessage({ __hw: 1, t: 'report', user: u, " +
+            "fonte: f, idx: i, novo: n }, '*'); }, cookie: function () { return ''; } };"
+        js = js.replace(Regex("""var B = window\.HubWebUser;\s*if \(!B\) return;"""), ponte)
+        js = js.replace(Regex("""\}\)\(__CFG__\);"""), "});")
+        require(!js.contains("window.HubWebUser") && js.contains("});")) { "hubweb_user.js mudou: ajuste gerarExtGecko" }
+        val glue = "(function () {\n  var run = " + js.trimEnd() + "\n  var iniciados = {};\n" +
+            "  window.addEventListener('message', function (e) {\n" +
+            "    var d = e.data;\n" +
+            "    if (e.source !== window || !d || d.__hw !== 1 || d.t !== 'cfg') return;\n" +
+            "    (d.cfgs || []).forEach(function (c) {\n" +
+            "      if (iniciados[c.__idx]) return;\n" +
+            "      iniciados[c.__idx] = true;\n" +
+            "      try { run(c); } catch (x) {}\n" +
+            "    });\n" +
+            "  });\n})();\n"
+        File(dir, "main.js").writeText(glue, Charsets.UTF_8)
+    }
+}
+if (gecko) {
+    tasks.matching { (it.name.startsWith("merge") && it.name.endsWith("Assets")) || it.name.contains("Lint", ignoreCase = true) }
+        .configureEach { dependsOn(gerarExtGecko) }
+}
 fun String.paraBuildConfig() = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 // Documentação exibida no app (Configurações → Documentação / Exemplo de JSON): copia o README e o
@@ -47,8 +80,8 @@ android {
         applicationId = "br.com.hubweb"
         minSdk = 24
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.0.18"
+        versionCode = 20
+        versionName = "1.0.19"
         buildConfigField("String", "EMPRESA_URL", (empProps.getProperty("configUrl") ?: "").trim().paraBuildConfig())
         buildConfigField("String", "EMPRESA_TOKEN", (empProps.getProperty("token") ?: "").trim().paraBuildConfig())
     }
@@ -92,6 +125,7 @@ android {
     }
 
     sourceSets.getByName("main").java.srcDir(if (gecko) "src/gecko/java" else "src/semgecko/java")
+    if (gecko) sourceSets.getByName("main").assets.srcDirs("src/gecko/assets", layout.buildDirectory.dir("generated/gecko-ext/assets").get().asFile)
     if (gecko) packaging { jniLibs { useLegacyPackaging = true } }
 
     compileOptions {

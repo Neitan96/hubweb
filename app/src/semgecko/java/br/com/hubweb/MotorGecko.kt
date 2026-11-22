@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
  */
 object MotorGecko {
     const val disponivel = false
+    var tracker: UserTracker? = null
 
     @Composable
     fun Popup(item: AppItem, urlInicial: String, onClose: () -> Unit) {
