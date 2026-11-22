@@ -88,13 +88,15 @@ class AppUpdater(ctx: Context, private val prefs: Prefs, private val repo: Confi
     var nova by mutableStateOf(NovaVersao.fromJson(prefs.appNovaJson)?.takeIf { maior(it.versao, versaoInstalada) }); private set
 
     val regra: RegraAtualizacao get() = repo.atualizacao.app
-    val ativo: Boolean get() = regra.ativo
+    /** Desligada de vez em builds da empresa (BuildConfig.ATUALIZACAO_APP = false); senão vale a regra da lista. */
+    val ativo: Boolean get() = BuildConfig.ATUALIZACAO_APP && regra.ativo
     val disponivel: Boolean get() = ativo && nova?.let { maior(it.versao, versaoInstalada) } == true
     val deviceOwner: Boolean
         get() = app.getSystemService(DevicePolicyManager::class.java).isDeviceOwnerApp(app.packageName)
 
     /** Resumo para as configurações. */
     fun resumo(): String = when {
+        !BuildConfig.ATUALIZACAO_APP -> "Atualização do app: desativada nesta versão (atualizações pelo MDM)."
         !ativo -> "Atualização do app: desativada pela lista (atualizacao.app.ativo)."
         disponivel -> "Atualização do app: nova versão ${nova?.versao} disponível."
         verificando -> "Atualização do app: verificando…"
@@ -110,8 +112,8 @@ class AppUpdater(ctx: Context, private val prefs: Prefs, private val repo: Confi
      */
     fun verificar(force: Boolean = false, gatilho: String = "abrir") {
         val r = regra
-        if (!r.ativo || verificando || baixando || agendado) {
-            if (!r.ativo) nova = null
+        if (!ativo || verificando || baixando || agendado) {
+            if (!ativo) nova = null
             return
         }
         val agora = System.currentTimeMillis()

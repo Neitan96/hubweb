@@ -72,6 +72,21 @@ object DeviceInfo {
         else -> if (lastUpdate > 0) SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(lastUpdate)) else "-"
     }
 
+    /**
+     * Corpo do POST da lista e das dicas: {"dispositivo": {nome, id, modelo, android, app}}, com os mesmos nomes e
+     * valores da chave "dispositivo" da telemetria. Assim o servidor pode devolver uma lista diferente por aparelho
+     * usando a mesma URL.
+     */
+    fun corpoPost(ctx: Context): ByteArray = org.json.JSONObject().put(
+        "dispositivo",
+        org.json.JSONObject()
+            .put("nome", name(ctx))
+            .put("id", androidId(ctx))
+            .put("modelo", model())
+            .put("android", Build.VERSION.RELEASE.orEmpty())
+            .put("app", appVersion(ctx)),
+    ).toString().toByteArray(Charsets.UTF_8)
+
     /** Rodapé: troca {nome} {ip} {modelo} {android} {app} {id} {atualizacao}; o resto fica como escrito. */
     fun render(template: String, ctx: Context, lastUpdate: Long): String {
         var out = template

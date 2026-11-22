@@ -10,13 +10,16 @@ fun sha256Hex(s: String): String =
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("hubweb", Context.MODE_PRIVATE)
 
-    /** URL da lista: a do MDM (configuração gerenciada), quando houver; senão a digitada nas Configurações. */
+    /**
+     * URL da lista: a do MDM (configuração gerenciada), quando houver; senão a digitada nas Configurações (ou trocada pela
+     * lista, novaConfigUrl); senão a embutida no build da empresa (BuildConfig.EMPRESA_URL, vazia no build público).
+     */
     var configUrl: String
-        get() = managedUrl.ifEmpty { sp.getString("configUrl", "") ?: "" }
+        get() = managedUrl.ifEmpty { (sp.getString("configUrl", "") ?: "").ifEmpty { BuildConfig.EMPRESA_URL } }
         set(v) = sp.edit().putString("configUrl", v.trim()).apply()
 
     var token: String
-        get() = managedToken.ifEmpty { sp.getString("token", "") ?: "" }
+        get() = managedToken.ifEmpty { (sp.getString("token", "") ?: "").ifEmpty { BuildConfig.EMPRESA_TOKEN } }
         set(v) = sp.edit().putString("token", v.trim()).apply()
 
     /** O que o MDM definiu (ManagedConfig); vazio = não definido. Quando há valor, ele manda e a tela o trava. */

@@ -146,6 +146,30 @@ class MainActivity : ComponentActivity() {
             )
         }
         telemetry.tracker = tracker
+        telemetry.estadoApp = {
+            val nulo = org.json.JSONObject.NULL
+            fun iso(ms: Long) = if (ms > 0) DeviceStats.iso(ms) else nulo
+            org.json.JSONObject().apply {
+                put("app", org.json.JSONObject().apply {
+                    put("tela", screen.name.lowercase())
+                    put("sistemaAberto", current?.item?.nome ?: nulo)
+                    put("naMemoria", pool.resumo())
+                    // Há quanto tempo o app está rodando (processo) e há quanto não recebe toque nem tecla.
+                    put("abertoHaSegundos", (SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime()) / 1000)
+                    put("ultimoToqueHaSegundos", (SystemClock.elapsedRealtime() - lastInput) / 1000)
+                })
+                put("lista", org.json.JSONObject().apply {
+                    put("aplicadaEm", iso(repo.lastUpdate))
+                    put("erro", repo.error ?: nulo)
+                    put("versao", repo.versaoLista ?: nulo)
+                    put("sistemas", repo.items.size)
+                })
+                put("dicas", org.json.JSONObject().apply {
+                    put("aplicadaEm", iso(tips.lastUpdate))
+                    put("erro", tips.error ?: nulo)
+                })
+            }
+        }
         tracker.telemetry = telemetry
         calcEnabled = prefs.calcButton
         fabsOn = prefs.fabsOn
@@ -331,6 +355,7 @@ class MainActivity : ComponentActivity() {
         applyKiosk()
         current?.takeIf { screen == Screen.BROWSER }?.webView?.onResume()
         popupEntry?.webView?.onResume()
+        AppStats.visivel(true)
         telemetry.start()
         handler.removeCallbacks(tick)
         handler.post(tick)
@@ -338,6 +363,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         handler.removeCallbacks(tick)
+        AppStats.visivel(false)
         telemetry.stop()
         pool.pauseAll()
         CookieManager.getInstance().flush()
@@ -486,6 +512,7 @@ class MainActivity : ComponentActivity() {
     private fun openApp(item: AppItem) {
         val e = pool.open(item)
         current = e
+        AppStats.abrirSistema(item.nome)
         screen = Screen.BROWSER
         requestedOrientation = when (item.orientacao) {
             "retrato" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
@@ -499,6 +526,7 @@ class MainActivity : ComponentActivity() {
 
     private fun closeBrowser() {
         current = null
+        AppStats.fecharSistema()
         screen = Screen.LAUNCHER
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         pool.setActive(null)

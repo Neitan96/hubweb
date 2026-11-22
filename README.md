@@ -99,6 +99,19 @@ Campos de cada item de `apps`:
 - Modo kiosk (padrão desligado)
 - Alterar senha / Encerrar o HubWeb
 
+## Lista por aparelho (mesma URL)
+A **lista** e as **dicas** são buscadas com **POST**, e o corpo traz os dados do aparelho, com os mesmos nomes e valores da chave `dispositivo` da telemetria:
+
+```json
+{ "dispositivo": { "nome": "COLETOR-07", "id": "9f3a...", "modelo": "Zebra TC52", "android": "11", "app": "1.0.7" } }
+```
+
+- **`nome`**, **`id`** (identificador estável do aparelho), **`modelo`**, **`android`** (versão) e **`app`** (versão do HubWeb). Vai com `Content-Type: application/json` e o `Authorization: Bearer` de sempre.
+- O servidor pode usá-los para devolver uma lista (e dicas) diferente por aparelho, na mesma URL. Quem não os usa devolve a mesma lista para todos.
+- **O endereço da lista e o das dicas precisam aceitar POST** (e a resposta continua sendo o JSON). Um servidor que só aceita GET devolve erro, e o aparelho fica com a última lista que já tem. Atenção a redirecionamentos (301/302): o Android os refaz como GET.
+- Os dados vão ao servidor que você configurou; o `id` e o `nome` identificam o aparelho, então use HTTPS.
+- A imagem de fundo e o logo continuam sendo baixados com GET.
+
 ## Trocar a URL ou o token da lista
 Dois campos opcionais na raiz do JSON mudam a configuração guardada nos aparelhos, sem mexer em cada um:
 
@@ -111,6 +124,17 @@ Dois campos opcionais na raiz do JSON mudam a configuração guardada nos aparel
 - **Antes de adotar, o app confere:** busca a lista com a URL e o token novos; só se ela abrir e for um JSON válido os valores são gravados (e essa lista passa a valer). Se falhar, o aparelho continua com os atuais e tenta de novo na próxima busca. Assim um valor errado não deixa o aparelho sem acesso.
 - **Como migrar:** deixe o campo na lista antiga até todos os aparelhos buscarem; depois retire. Aparelho que ficar desligado nesse período precisa de acesso à lista antiga ao ligar.
 - **Não vale** para URL ou token definidos pelo MDM (configuração gerenciada): esses mandam e só mudam no MDM.
+
+## Build da empresa (URL e token embutidos)
+Para um APK que já sai configurado, sem MDM: copie `empresa.properties.example` para `empresa.properties` (fica fora do git), preencha `configUrl`, `token` e `sufixo`, e compile com `-Pempresa`:
+
+```
+gradlew assembleRelease -Pempresa
+```
+
+- O APK sai como `HubWeb <versão> <sufixo>.apk`, com a URL e o token embutidos e a **autoatualização pelo GitHub desligada** (a versão pública não tem a URL e substituiria esta).
+- Ordem de prioridade: MDM, depois o que foi digitado nas Configurações ou trocado pela lista (`novaConfigUrl`/`novoToken`), depois o embutido. A troca pela lista continua funcionando.
+- O token fica dentro do APK e pode ser extraído por quem tiver o arquivo: use um token restrito e não publique o APK.
 
 ## Inatividade e sistemas abertos (por RAM)
 Dois limites vêm da lista, na raiz do JSON:
@@ -378,8 +402,21 @@ Exemplo completo (Wi-Fi, GPS, usuário identificado por cookie e por formulário
     "timestamp": "2026-11-20T21:30:00Z",
     "dispositivo": { "nome": "TABLET-07", "id": "9f3a1c2b7d4e5f60", "modelo": "Galaxy Tab A8", "android": "11", "app": "1.0.2" },
     "rede": { "tipo": "wifi", "ip": "192.168.0.15", "sinalDbm": -58, "sinalNivel": 3, "velocidadeMbps": 144 },
-    "bateria": { "nivel": 87, "carregando": true, "fonte": "usb", "temperaturaC": 31.5 },
+    "bateria": { "nivel": 87, "carregando": true, "fonte": "usb", "temperaturaC": 31.5, "saude": "boa", "tensaoMv": 4120, "ciclos": 212 },
     "localizacao": { "status": "ok", "lat": -23.5505, "lon": -46.6333, "precisaoM": 12.0, "idadeSegundos": 4, "provedor": "gps" },
+    "hardware": {
+      "memoria": { "totalMb": 3700, "livreMb": 1180, "baixa": false },
+      "armazenamento": { "totalMb": 25600, "livreMb": 9800 },
+      "ligadoHaSegundos": 86400, "reinicios": 14, "modoAviao": false, "telaLigada": true
+    },
+    "seguranca": { "deviceOwner": false, "modoKiosk": true, "bloqueioDeTela": false, "patchSeguranca": "2025-06-01", "root": false },
+    "app": {
+      "tela": "browser", "sistemaAberto": "Webmail", "abertoHaSegundos": 5400, "ultimoToqueHaSegundos": 12,
+      "naMemoria": [ { "sistema": "Webmail", "carregando": false, "carregado": true, "erro": null } ]
+    },
+    "lista": { "aplicadaEm": "2026-11-20T21:00:00Z", "erro": null, "versao": 1, "sistemas": 6 },
+    "dicas": { "aplicadaEm": "2026-11-20T21:00:03Z", "erro": null },
+    "uso": { "periodoSegundos": 60, "sistemas": [ { "sistema": "Webmail", "segundos": 48, "aberturas": 1 } ] },
     "usuarios": [
       { "sistema": "Webmail", "login": "joao.silva", "desde": "2026-11-20T21:00:00Z", "fonte": "cookie", "modo": "continuo" },
       { "sistema": "Webmail", "login": "joao.silva", "desde": "2026-11-20T21:00:05Z", "fonte": "formulario", "modo": "evento" }
@@ -406,6 +443,25 @@ Campos do `payload` (os nomes abaixo são relativos a ele):
 | `bateria.carregando` | verdadeiro/falso | Carregando ou cheia |
 | `bateria.fonte` | texto ou `null` | `tomada`, `usb`, `sem fio`; `null` fora do carregador |
 | `bateria.temperaturaC` | número | Graus Celsius, quando o aparelho informa |
+| `bateria.saude` | texto | `boa`, `superaquecida`, `ruim`, `sobretensao`, `fria` ou `falha`; ausente se o aparelho não informa |
+| `bateria.tensaoMv` / `.ciclos` | número | Tensão em mV; ciclos de carga (só Android 14+ e só em aparelhos que informam) |
+| `rede.ssid` | texto | Só no Wi-Fi e com a permissão de localização concedida: o nome da rede |
+| `rede.servidor` | objeto | Conexão com o servidor da telemetria, medida no envio anterior (5 conexões TCP): `latenciaMs` (mediana, `null` se todas falharam), `perdaPct` (conexões que falharam, de 0 a 100), `tentativas`, `medidoEm`. Ausente no primeiro envio |
+| `hardware.memoria` | objeto | `totalMb`, `livreMb` e `baixa` (o Android sinalizou pouca memória) |
+| `hardware.armazenamento` | objeto | `totalMb` e `livreMb` do armazenamento interno |
+| `hardware.ligadoHaSegundos` / `.reinicios` | número | Tempo desde que o aparelho ligou; quantas vezes já reiniciou (ausente se o Android não informa) |
+| `hardware.modoAviao` / `.telaLigada` | verdadeiro/falso | Modo avião ligado; tela acesa |
+| `seguranca.deviceOwner` / `.modoKiosk` | verdadeiro/falso | O HubWeb é device owner; o modo kiosk está ativo |
+| `seguranca.bloqueioDeTela` | verdadeiro/falso | O aparelho tem senha, PIN ou padrão de bloqueio |
+| `seguranca.patchSeguranca` | texto | Data do patch de segurança do Android (`AAAA-MM-DD`) |
+| `seguranca.root` | verdadeiro/falso | Indício de root (heurística: build de teste ou binário `su`); quem esconde o root não é detectado |
+| `app.tela` | texto | `launcher`, `browser` (um sistema aberto) ou `settings` |
+| `app.sistemaAberto` | texto ou `null` | `nome` do sistema na tela agora |
+| `app.naMemoria[]` | lista | Sistemas mantidos abertos: `sistema`, `carregando`, `carregado` (a primeira carga terminou) e `erro` (último erro de carga, ex.: `net::ERR_NAME_NOT_RESOLVED`, ou `null`) |
+| `app.abertoHaSegundos` / `.ultimoToqueHaSegundos` | número | Há quanto tempo o app está rodando; há quanto tempo não recebe toque nem tecla |
+| `lista` | objeto | `aplicadaEm` (UTC da última lista aplicada, `null` se nunca), `erro` (da última busca, ou `null`), `versao` (a chave `versao` do JSON, se houver) e `sistemas` (quantidade) |
+| `dicas` | objeto | `aplicadaEm` e `erro`, como na lista |
+| `uso` | objeto | Uso desde o último envio bem-sucedido (se um envio falha, o uso vai junto no seguinte): `periodoSegundos` e `sistemas[]` com `sistema`, `segundos` (tempo na tela, com o app em primeiro plano) e `aberturas` |
 | `localizacao` | objeto ou `null` | `null` se a lista desligou a localização (`telemetria.localizacao: false`) |
 | `localizacao.status` | texto | `ok`, `sem_permissao` (o usuário negou) ou `sem_fix` (ainda sem posição). Só com `ok` vêm os campos abaixo |
 | `localizacao.lat` / `.lon` | número | Graus decimais |

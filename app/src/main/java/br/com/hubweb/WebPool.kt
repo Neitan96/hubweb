@@ -70,6 +70,16 @@ class WebPool(
         return e
     }
 
+    /** Sistemas na memória e o estado de cada um (telemetria): carregando, primeira carga feita e último erro. */
+    fun resumo(): org.json.JSONArray = org.json.JSONArray().apply {
+        entries.values.forEach { e ->
+            put(
+                org.json.JSONObject().put("sistema", e.item.nome).put("carregando", e.loading)
+                    .put("carregado", e.firstLoadDone).put("erro", e.error ?: org.json.JSONObject.NULL),
+            )
+        }
+    }
+
     /** WebViews dos botões flutuantes (popup): separados do limite `maxAlive` dos sistemas. */
     private val popups = LinkedHashMap<String, Entry>()
 

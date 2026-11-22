@@ -6,6 +6,18 @@ val ksProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// Build da empresa (-Pempresa): lê empresa.properties (fora do controle de versão) com configUrl, token e sufixo do nome
+// do APK, grava URL e token no app e desliga a autoatualização pelo GitHub. Sem -Pempresa, o build é o público.
+val empresa = project.hasProperty("empresa")
+val empProps = Properties().apply {
+    val f = rootProject.file("empresa.properties")
+    if (empresa) {
+        require(f.exists()) { "Falta empresa.properties (veja empresa.properties.example)" }
+        f.inputStream().use { load(it) }
+    }
+}
+fun String.paraBuildConfig() = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 // Documentação exibida no app (Configurações → Documentação / Exemplo de JSON): copia o README e o
 // exemplo do projeto para os assets, para o app mostrar sempre o mesmo texto do repositório.
 val copyDocs by tasks.registering(Copy::class) {
@@ -31,8 +43,11 @@ android {
         applicationId = "br.com.hubweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
+        buildConfigField("String", "EMPRESA_URL", (empProps.getProperty("configUrl") ?: "").trim().paraBuildConfig())
+        buildConfigField("String", "EMPRESA_TOKEN", (empProps.getProperty("token") ?: "").trim().paraBuildConfig())
+        buildConfigField("boolean", "ATUALIZACAO_APP", (!empresa).toString())
     }
 
     // Nome do arquivo: "HubWeb <versão>.apk" (release); nos demais tipos acrescenta o nome do tipo.
@@ -40,8 +55,11 @@ android {
         val variant = this
         outputs.all {
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
-                if (variant.buildType.name == "release") "HubWeb ${variant.versionName}.apk"
-                else "HubWeb ${variant.versionName} ${variant.buildType.name}.apk"
+                listOfNotNull(
+                    "HubWeb ${variant.versionName}",
+                    empProps.getProperty("sufixo")?.trim()?.takeIf { empresa && it.isNotEmpty() },
+                    variant.buildType.name.takeIf { it != "release" },
+                ).joinToString(" ") + ".apk"
         }
     }
 
@@ -66,6 +84,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {

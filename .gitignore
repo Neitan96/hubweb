@@ -2,6 +2,7 @@
 *.jks
 *.keystore
 keystore.properties
+empresa.properties
 
 # Configuração local da máquina
 local.properties

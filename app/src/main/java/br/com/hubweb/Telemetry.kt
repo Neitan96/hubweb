@@ -24,6 +24,8 @@ import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,6 +55,17 @@ class Telemetry(
 
     /** Usuários identificados por sistema; entram no payload e geram eventos. */
     var tracker: UserTracker? = null
+
+    /**
+     * Estado do app para a telemetria (sistema aberto, sistemas na memória, erros, lista e dicas); quem monta é a
+     * MainActivity, que conhece essas partes. Cada chave do objeto vira uma chave do payload ("app", "lista", "dicas").
+     */
+    var estadoApp: (() -> JSONObject)? = null
+
+    /** Medição da conexão com o servidor da telemetria (feita em segundo plano a cada envio; vai no envio seguinte). */
+    private class Sonda(val latenciaMs: Long?, val falhas: Int, val total: Int, val em: Long)
+    @Volatile private var sonda: Sonda? = null
+    private var sondando = false
 
     /** Resultado do último envio, para mostrar nas configurações. */
     var status by mutableStateOf<String?>(null); private set
@@ -176,15 +189,47 @@ class Telemetry(
             status = "URL precisa ser https"
             return
         }
+        val uso = AppStats.retirarUso() // uso por sistema desde o último envio; volta se este envio falhar
         val body = try {
-            envelope("telemetria", payload(cfg))
+            envelope("telemetria", payload(cfg, uso))
         } catch (e: Exception) {
+            AppStats.devolverUso(uso)
             status = "erro ao montar: ${e.message}"
             return
         }
+        sondar(cfg.url)
         post(cfg.url, tokenFor(cfg.url, cfg.token), body) { result ->
+            if (result != "OK") AppStats.devolverUso(uso)
             val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
             status = "$hora · $result"
+        }
+    }
+
+    /**
+     * Mede a conexão com o servidor da telemetria: 5 conexões TCP seguidas (limite de 3 s cada), de onde saem a latência
+     * (mediana) e as falhas. O resultado entra no próximo envio, para a medição não atrasar este.
+     */
+    private fun sondar(url: String) {
+        if (sondando) return
+        val u = runCatching { URL(url) }.getOrNull() ?: return
+        val host = u.host
+        val porta = if (u.port > 0) u.port else 443
+        sondando = true
+        thread(name = "hubweb-sonda") {
+            val tempos = ArrayList<Long>()
+            var falhas = 0
+            val total = 5
+            repeat(total) {
+                try {
+                    val t0 = SystemClock.elapsedRealtime()
+                    Socket().use { it.connect(InetSocketAddress(host, porta), 3_000) }
+                    tempos += SystemClock.elapsedRealtime() - t0
+                } catch (_: Exception) {
+                    falhas++
+                }
+            }
+            sonda = Sonda(tempos.sorted().let { if (it.isEmpty()) null else it[it.size / 2] }, falhas, total, System.currentTimeMillis())
+            handler.post { sondando = false }
         }
     }
 
@@ -256,13 +301,18 @@ class Telemetry(
 
     // ------------------------------------------------------------ payload
 
-    private fun payload(cfg: TelemetriaConfig): JSONObject {
+    private fun payload(cfg: TelemetriaConfig, uso: Uso): JSONObject {
         return JSONObject().apply {
             put("timestamp", isoNow())
             put("dispositivo", deviceJson())
             put("rede", network())
             put("bateria", battery())
             put("localizacao", if (cfg.localizacao) location() else JSONObject.NULL)
+            put("hardware", DeviceStats.hardware(ctx))
+            put("seguranca", DeviceStats.seguranca(ctx, prefs.kiosk))
+            put("uso", usoJson(uso))
+            // Estado do app: chaves "app", "lista" e "dicas" (veja MainActivity).
+            runCatching { estadoApp?.invoke() }.getOrNull()?.let { e -> e.keys().forEach { k -> put(k, e.get(k)) } }
             // Quem está logado em cada sistema (sistema -> login), e o identificado mais recentemente.
             val t = tracker
             put("usuarios", JSONArray().apply {
@@ -279,6 +329,18 @@ class Telemetry(
                 t?.current()?.let { JSONObject().put("sistema", it.sistema).put("login", it.login) } ?: JSONObject.NULL,
             )
         }
+    }
+
+    private fun usoJson(u: Uso) = JSONObject().apply {
+        put("periodoSegundos", u.periodoMs / 1000)
+        put("sistemas", JSONArray().apply {
+            (u.ms.keys + u.aberturas.keys).distinct().sorted().forEach { nome ->
+                put(
+                    JSONObject().put("sistema", nome).put("segundos", (u.ms[nome] ?: 0L) / 1000)
+                        .put("aberturas", u.aberturas[nome] ?: 0),
+                )
+            }
+        })
     }
 
     private fun isoAt(millis: Long): String =
@@ -323,9 +385,23 @@ class Telemetry(
                     put("sinalNivel", level(rssi))
                 }
                 info?.linkSpeed?.takeIf { it > 0 }?.let { put("velocidadeMbps", it) }
+                // O nome da rede só vem com a permissão de localização; sem ela o Android devolve "<unknown ssid>".
+                if (hasPermission()) {
+                    info?.ssid?.removeSurrounding("\"")?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
+                        ?.let { put("ssid", it) }
+                }
             } else if (Build.VERSION.SDK_INT >= 29) {
                 // Para celular o valor depende do aparelho/versão; pode vir ausente.
                 caps?.signalStrength?.takeIf { it != Int.MIN_VALUE }?.let { put("sinalDbm", it) }
+            }
+            // Conexão com o servidor da telemetria (medida no envio anterior): latência mediana e falhas de conexão.
+            sonda?.let { s ->
+                put(
+                    "servidor",
+                    JSONObject().put("latenciaMs", s.latenciaMs ?: JSONObject.NULL)
+                        .put("perdaPct", s.falhas * 100 / s.total).put("tentativas", s.total)
+                        .put("medidoEm", DeviceStats.iso(s.em)),
+                )
             }
         }
     }
@@ -358,6 +434,20 @@ class Telemetry(
             )
             i?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)?.takeIf { it != Int.MIN_VALUE }
                 ?.let { put("temperaturaC", it / 10.0) }
+            // Saúde, tensão e ciclos (a contagem de ciclos só existe no Android 14+ e nem todo aparelho informa).
+            when (i?.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)) {
+                BatteryManager.BATTERY_HEALTH_GOOD -> "boa"
+                BatteryManager.BATTERY_HEALTH_OVERHEAT -> "superaquecida"
+                BatteryManager.BATTERY_HEALTH_DEAD -> "ruim"
+                BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "sobretensao"
+                BatteryManager.BATTERY_HEALTH_COLD -> "fria"
+                BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "falha"
+                else -> null
+            }?.let { put("saude", it) }
+            i?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0)?.takeIf { it > 0 }?.let { put("tensaoMv", it) }
+            if (Build.VERSION.SDK_INT >= 34) {
+                i?.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, 0)?.takeIf { it > 0 }?.let { put("ciclos", it) }
+            }
         }
     }
 

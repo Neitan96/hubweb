@@ -89,7 +89,7 @@ class DicasSettings(
  * Baixa o JSON de dicas (endpoint do bloco "dicas" da lista), guarda em cache (filesDir/dicas.json) e sorteia
  * a próxima dica. Se o endpoint cair ou o JSON for inválido, vale o último cache.
  */
-class TipsRepo(ctx: Context, private val prefs: Prefs, private val repo: ConfigRepo) {
+class TipsRepo(private val ctx: Context, private val prefs: Prefs, private val repo: ConfigRepo) {
     private val file = File(ctx.filesDir, "dicas.json")
     private val main = Handler(Looper.getMainLooper())
     private var agendado = false // há uma busca esperando o atraso aleatório (espalharSegundos)
@@ -212,9 +212,14 @@ class TipsRepo(ctx: Context, private val prefs: Prefs, private val repo: ConfigR
             conn.connectTimeout = 10_000
             conn.readTimeout = 15_000
             conn.setRequestProperty("Accept", "application/json")
+            // POST com os dados do aparelho (veja ConfigRepo): dicas por aparelho na mesma URL.
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             if (!token.isNullOrBlank() && url.startsWith("https://", ignoreCase = true)) {
                 conn.setRequestProperty("Authorization", "Bearer $token")
             }
+            conn.outputStream.use { it.write(DeviceInfo.corpoPost(ctx)) }
             val code = conn.responseCode
             if (code !in 200..299) throw IllegalStateException("HTTP $code")
             if (conn.contentLengthLong > MAX_BYTES) throw IllegalStateException("JSON muito grande")

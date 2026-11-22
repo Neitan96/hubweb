@@ -126,6 +126,8 @@ class Config(
     val novaConfigUrl: String? = null,
     /** Novo token da lista; null = não troca, "" = apaga o token. */
     val novoToken: String? = null,
+    /** "versao" do JSON da lista (informativa; vai na telemetria); null = não informada. */
+    val versaoLista: Int? = null,
 )
 
 /**
@@ -133,7 +135,7 @@ class Config(
  * Se a URL estiver indisponível ou o JSON for inválido, o último cache válido continua valendo.
  * A imagem de fundo (`fundoUrl`) só é baixada de novo quando a URL muda.
  */
-class ConfigRepo(ctx: Context, private val prefs: Prefs) {
+class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
     private val file = File(ctx.filesDir, "apps.json")
     private val bgFile = File(ctx.filesDir, "fundo.img")
     private val logoFile = File(ctx.filesDir, "logo.img")
@@ -166,6 +168,7 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
 
     /** Valores em uso, vindos da lista (ou o padrão): timeout de inatividade e sistemas mantidos abertos. */
     var timeoutMin by mutableStateOf(prefs.timeoutMin); private set
+    var versaoLista by mutableStateOf<Int?>(null); private set
     var sistemasAbertos by mutableStateOf(prefs.maxAlive); private set
 
     /** `modoKiosk` da última lista aplicada (null = a lista não define). Observável pela UI. */
@@ -184,6 +187,7 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
         val faixas = cfg.sistemasAbertos
         val abertos = if (faixas.isNullOrEmpty()) 2
         else faixas.filter { it.ramMinimaMb <= ramMb }.maxByOrNull { it.ramMinimaMb }?.quantidade ?: 1
+        versaoLista = cfg.versaoLista
         prefs.timeoutMin = timeout
         prefs.maxAlive = abertos
         timeoutMin = timeout
@@ -319,10 +323,15 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             conn.connectTimeout = 10_000
             conn.readTimeout = 15_000
             conn.setRequestProperty("Accept", "application/json")
+            // POST com os dados do aparelho: o servidor pode devolver uma lista por aparelho na mesma URL.
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             // O token só viaja por HTTPS.
             if (token.isNotBlank() && url.startsWith("https://", ignoreCase = true)) {
                 conn.setRequestProperty("Authorization", "Bearer $token")
             }
+            conn.outputStream.use { it.write(DeviceInfo.corpoPost(ctx)) }
             val code = conn.responseCode
             if (code !in 200..299) throw IllegalStateException("HTTP $code")
             if (conn.contentLengthLong > MAX_BYTES) throw IllegalStateException("JSON muito grande")
@@ -689,7 +698,8 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             // "novaConfigUrl" / "novoToken": trocam a URL e o token que o aparelho usa para buscar esta lista.
             val novaUrl = root?.str("novaConfigUrl")?.trim()?.takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
             val novoToken = if (root != null && root.has("novoToken") && !root.isNull("novoToken")) root.optString("novoToken").trim() else null
-            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, timeoutInatividade, sistemasAbertos, novaUrl, novoToken)
+            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, timeoutInatividade, sistemasAbertos, novaUrl, novoToken,
+                root?.optInt("versao", -1)?.takeIf { it >= 0 })
         }
 
         private fun JSONObject.str(k: String): String? = if (isNull(k)) null else optString(k)
