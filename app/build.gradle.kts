@@ -41,14 +41,14 @@ plugins {
 
 android {
     namespace = "br.com.hubweb"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "br.com.hubweb"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 18
-        versionName = "1.0.17"
+        targetSdk = 36
+        versionCode = 19
+        versionName = "1.0.18"
         buildConfigField("String", "EMPRESA_URL", (empProps.getProperty("configUrl") ?: "").trim().paraBuildConfig())
         buildConfigField("String", "EMPRESA_TOKEN", (empProps.getProperty("token") ?: "").trim().paraBuildConfig())
     }
