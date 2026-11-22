@@ -7,7 +7,8 @@ val ksProps = Properties().apply {
 }
 
 // Build da empresa (-Pempresa): lê empresa.properties (fora do controle de versão) com configUrl, token e sufixo do nome
-// do APK, grava URL e token no app e desliga a autoatualização pelo GitHub. Sem -Pempresa, o build é o público.
+// do APK. O app grava URL e token nas Configurações na primeira abertura (e a autoatualização continua ligada: o APK
+// público atualiza por cima e os dados ficam). Sem -Pempresa, o build é o público, sem URL nem token.
 val empresa = project.hasProperty("empresa")
 val empProps = Properties().apply {
     val f = rootProject.file("empresa.properties")
@@ -43,11 +44,10 @@ android {
         applicationId = "br.com.hubweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.0.9"
         buildConfigField("String", "EMPRESA_URL", (empProps.getProperty("configUrl") ?: "").trim().paraBuildConfig())
         buildConfigField("String", "EMPRESA_TOKEN", (empProps.getProperty("token") ?: "").trim().paraBuildConfig())
-        buildConfigField("boolean", "ATUALIZACAO_APP", (!empresa).toString())
     }
 
     // Nome do arquivo: "HubWeb <versão>.apk" (release); nos demais tipos acrescenta o nome do tipo.

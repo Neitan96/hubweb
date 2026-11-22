@@ -10,16 +10,25 @@ fun sha256Hex(s: String): String =
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("hubweb", Context.MODE_PRIVATE)
 
-    /**
-     * URL da lista: a do MDM (configuração gerenciada), quando houver; senão a digitada nas Configurações (ou trocada pela
-     * lista, novaConfigUrl); senão a embutida no build da empresa (BuildConfig.EMPRESA_URL, vazia no build público).
-     */
+    init {
+        // Build da empresa: na primeira abertura grava a URL e o token embutidos nas Configurações, como se tivessem sido
+        // digitados. Assim eles continuam valendo quando o app for atualizado pelo GitHub (o APK público não os traz).
+        // Vazio no build público. Só acontece uma vez: depois, o que está nas Configurações (ou veio da lista) é que vale.
+        if ((BuildConfig.EMPRESA_URL.isNotEmpty() || BuildConfig.EMPRESA_TOKEN.isNotEmpty()) && !sp.getBoolean("empresaSemeada", false)) {
+            val ed = sp.edit().putBoolean("empresaSemeada", true)
+            if (sp.getString("configUrl", "").isNullOrEmpty()) ed.putString("configUrl", BuildConfig.EMPRESA_URL)
+            if (sp.getString("token", "").isNullOrEmpty()) ed.putString("token", BuildConfig.EMPRESA_TOKEN)
+            ed.apply()
+        }
+    }
+
+    /** URL da lista: a do MDM (configuração gerenciada), quando houver; senão a das Configurações (digitada, ou trocada pela lista). */
     var configUrl: String
-        get() = managedUrl.ifEmpty { (sp.getString("configUrl", "") ?: "").ifEmpty { BuildConfig.EMPRESA_URL } }
+        get() = managedUrl.ifEmpty { sp.getString("configUrl", "") ?: "" }
         set(v) = sp.edit().putString("configUrl", v.trim()).apply()
 
     var token: String
-        get() = managedToken.ifEmpty { (sp.getString("token", "") ?: "").ifEmpty { BuildConfig.EMPRESA_TOKEN } }
+        get() = managedToken.ifEmpty { sp.getString("token", "") ?: "" }
         set(v) = sp.edit().putString("token", v.trim()).apply()
 
     /** O que o MDM definiu (ManagedConfig); vazio = não definido. Quando há valor, ele manda e a tela o trava. */

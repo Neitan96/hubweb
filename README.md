@@ -145,9 +145,9 @@ Para um APK que já sai configurado, sem MDM: copie `empresa.properties.example`
 gradlew assembleRelease -Pempresa
 ```
 
-- O APK sai como `HubWeb <versão> <sufixo>.apk`, com a URL e o token embutidos e a **autoatualização pelo GitHub desligada** (a versão pública não tem a URL e substituiria esta).
-- Ordem de prioridade: MDM, depois o que foi digitado nas Configurações ou trocado pela lista (`novaConfigUrl`/`novoToken`), depois o embutido. A troca pela lista continua funcionando.
-- O token fica dentro do APK e pode ser extraído por quem tiver o arquivo: use um token restrito e não publique o APK.
+- O APK sai como `HubWeb <versão> <sufixo>.apk`. **Na primeira abertura**, o app grava a URL e o token embutidos nas Configurações, como se tivessem sido digitados. Depois disso, valem as Configurações (e o que a lista mandar por `novaConfigUrl`/`novoToken`), e o MDM, se houver, continua mandando.
+- A **autoatualização pelo GitHub continua ligada**: o APK público instala por cima e os dados salvos permanecem (mesmo pacote e mesma assinatura). Por isso o aparelho precisa abrir o APK da empresa pelo menos uma vez antes de atualizar. Só desinstalar o app ou limpar os dados apaga a URL e o token.
+- O token fica dentro do APK da empresa e pode ser extraído por quem tiver o arquivo: use um token restrito e não publique esse APK.
 
 ## Inatividade e sistemas abertos (por RAM)
 Dois limites vêm da lista, na raiz do JSON:

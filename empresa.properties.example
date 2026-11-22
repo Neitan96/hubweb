@@ -1,5 +1,6 @@
 # Build da empresa: copie para empresa.properties (fora do git) e compile com  gradlew assembleRelease -Pempresa
-# O APK sai como "HubWeb <versão> <sufixo>.apk", com a URL e o token já embutidos e a autoatualização pelo GitHub desligada.
+# O APK sai como "HubWeb <versão> <sufixo>.apk". Na primeira abertura o app grava a URL e o token nas Configurações; a
+# autoatualização pelo GitHub continua ligada, e a atualização (APK público) mantém esses dados.
 configUrl=https://seu-servidor/api/r/hubweb/apps
 token=
 sufixo=minha-empresa
