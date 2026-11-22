@@ -15,6 +15,8 @@ object AppStats {
     private var visivel = false // o app está em primeiro plano
     private var desde = SystemClock.elapsedRealtime()
     private var periodoDesde = SystemClock.elapsedRealtime()
+    private var ultimo: String? = null // último sistema aberto
+    private var penultimo: String? = null // o aberto antes dele
     private val ms = LinkedHashMap<String, Long>()
     private val aberturas = LinkedHashMap<String, Int>()
 
@@ -27,8 +29,15 @@ object AppStats {
     fun abrirSistema(nome: String) {
         acumular()
         sistema = nome
+        if (nome != ultimo) {
+            penultimo = ultimo
+            ultimo = nome
+        }
         aberturas[nome] = (aberturas[nome] ?: 0) + 1
     }
+
+    /** O sistema aberto antes de [de] (a urlInicial usa em {sistemaAnterior}); null se não houve outro. */
+    fun anterior(de: String): String? = if (ultimo != de) ultimo else penultimo
 
     fun fecharSistema() {
         acumular()

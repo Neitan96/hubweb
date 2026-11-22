@@ -100,6 +100,12 @@ class Atualizacao(
 
 val REGRA_APP_PADRAO = RegraAtualizacao(intervaloSegundos = 21_600, quando = setOf("abrir", "hub"))
 
+/**
+ * `abrirAoEntrar`: abre um sistema sozinho ao entrar no app. [url] (opcional) é a página em que ele abre, no lugar da
+ * `urlInicial`; [quando] é `"iniciar"` (só ao abrir o app) ou `"sempre"` (toda vez que o app volta ao primeiro plano).
+ */
+class AbrirAoEntrar(val sistema: String, val url: String?, val quando: String)
+
 /** Uma faixa de `sistemasAbertos`: a partir de [ramMinimaMb] de RAM, mantém [quantidade] sistemas abertos. */
 class FaixaRam(val ramMinimaMb: Long, val quantidade: Int)
 
@@ -128,6 +134,8 @@ class Config(
     val novoToken: String? = null,
     /** "versao" do JSON da lista (informativa; vai na telemetria); null = não informada. */
     val versaoLista: Int? = null,
+    /** Sistema a abrir sozinho ao entrar no app; null = não abre (fica no launcher). */
+    val abrirAoEntrar: AbrirAoEntrar? = null,
 )
 
 /**
@@ -169,6 +177,7 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
     /** Valores em uso, vindos da lista (ou o padrão): timeout de inatividade e sistemas mantidos abertos. */
     var timeoutMin by mutableStateOf(prefs.timeoutMin); private set
     var versaoLista by mutableStateOf<Int?>(null); private set
+    var abrirAoEntrar by mutableStateOf<AbrirAoEntrar?>(null); private set
     var sistemasAbertos by mutableStateOf(prefs.maxAlive); private set
 
     /** `modoKiosk` da última lista aplicada (null = a lista não define). Observável pela UI. */
@@ -188,6 +197,7 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
         val abertos = if (faixas.isNullOrEmpty()) 2
         else faixas.filter { it.ramMinimaMb <= ramMb }.maxByOrNull { it.ramMinimaMb }?.quantidade ?: 1
         versaoLista = cfg.versaoLista
+        abrirAoEntrar = cfg.abrirAoEntrar
         prefs.timeoutMin = timeout
         prefs.maxAlive = abertos
         timeoutMin = timeout
@@ -695,11 +705,23 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
                 is Number -> listOf(FaixaRam(0, v.toInt().coerceIn(1, 6)))
                 else -> null
             }
+            // "abrirAoEntrar": {"sistema": "Nome", "url": "opcional", "quando": "iniciar" | "sempre"} ou só o nome do sistema.
+            val abrirAoEntrar = when (val a = root?.opt("abrirAoEntrar")) {
+                is String -> a.trim().takeIf { it.isNotEmpty() }?.let { AbrirAoEntrar(it, null, "iniciar") }
+                is JSONObject -> a.str("sistema")?.trim()?.takeIf { it.isNotEmpty() }?.let { s ->
+                    AbrirAoEntrar(
+                        s,
+                        a.str("url")?.trim()?.takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) },
+                        if (a.str("quando")?.trim()?.lowercase() == "sempre") "sempre" else "iniciar",
+                    )
+                }
+                else -> null
+            }
             // "novaConfigUrl" / "novoToken": trocam a URL e o token que o aparelho usa para buscar esta lista.
             val novaUrl = root?.str("novaConfigUrl")?.trim()?.takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
             val novoToken = if (root != null && root.has("novoToken") && !root.isNull("novoToken")) root.optString("novoToken").trim() else null
             return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, timeoutInatividade, sistemasAbertos, novaUrl, novoToken,
-                root?.optInt("versao", -1)?.takeIf { it >= 0 })
+                root?.optInt("versao", -1)?.takeIf { it >= 0 }, abrirAoEntrar)
         }
 
         private fun JSONObject.str(k: String): String? = if (isNull(k)) null else optString(k)

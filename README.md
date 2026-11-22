@@ -112,6 +112,19 @@ A **lista** e as **dicas** são buscadas com **POST**, e o corpo traz os dados d
 - Os dados vão ao servidor que você configurou; o `id` e o `nome` identificam o aparelho, então use HTTPS.
 - A imagem de fundo e o logo continuam sendo baixados com GET.
 
+## Abrir um sistema ao entrar no app
+O bloco opcional `abrirAoEntrar` abre um sistema sozinho, em vez de parar no hub:
+
+```json
+"abrirAoEntrar": { "sistema": "Webmail", "url": "https://mail.exemplo.com/caixa-de-entrada", "quando": "iniciar" }
+```
+
+- **`sistema`**: o `nome` de um item de `apps`. Também vale só o nome: `"abrirAoEntrar": "Webmail"`. Nome que não existe na lista: nada é aberto.
+- **`url`** (opcional): a página em que o sistema abre, no lugar da `urlInicial`. Aceita as mesmas variáveis da `urlInicial` e só vale se casar com o `urlPermitida` do sistema; senão abre na `urlInicial`.
+- **`quando`**: `"iniciar"` (padrão) abre só quando o app é aberto; `"sempre"` abre toda vez que o app volta ao primeiro plano.
+- **Só age no hub:** não tira o usuário das Configurações nem de um sistema que ele já está usando. Depois que ele volta ao hub (Voltar ou timeout de inatividade), o sistema não abre de novo até a próxima entrada.
+- Na primeira abertura sem lista em cache, abre assim que a lista chega. Sistemas com crachá obrigatório pedem o crachá, como ao abrir pelo hub.
+
 ## Trocar a URL ou o token da lista
 Dois campos opcionais na raiz do JSON mudam a configuração guardada nos aparelhos, sem mexer em cada um:
 
@@ -158,6 +171,28 @@ Dois limites vêm da lista, na raiz do JSON:
 A `urlInicial` (no hub e no botão flutuante) aceita variáveis que o app troca por valores do aparelho, já codificados para URL, na abertura e também em atualizar/início:
 
 `{nome}` · `{ip}` (IPv4 local; vazio se sem rede) · `{modelo}` · `{android}` · `{app}` (versão do HubWeb) · `{id}` (Android ID)
+
+**Variáveis extras** (só na `urlInicial`; o rodapé não as aceita). O que o app não souber vira vazio, e um nome desconhecido fica como escrito:
+
+| Variável | Valor |
+|---|---|
+| `{usuario}` | Login atual detectado **neste** sistema (com várias detecções, o mais recente) |
+| `{usuario:Nome do sistema}` | Login atual de **outro** sistema, pelo `nome` dele em `apps` |
+| `{usuarioDesde}` / `{usuarioDesde:Nome do sistema}` | Quando esse login foi detectado (UTC, ISO 8601) |
+| `{fabricante}` | Fabricante do aparelho |
+| `{bateria}` / `{carregando}` | Nível (0 a 100) / `true` ou `false` |
+| `{ssid}` | Nome da rede Wi-Fi (precisa da permissão de localização) |
+| `{redeTipo}` / `{sinalDbm}` | `wifi`, `celular`, `ethernet`, `outra` ou `nenhuma` / força do sinal |
+| `{ramLivreMb}` / `{armazenamentoLivreMb}` | Memória livre / espaço livre no armazenamento, em MB |
+| `{versaoLista}` | A chave `versao` do JSON da lista |
+| `{sistemaAnterior}` | O sistema aberto antes deste |
+| `{hora}` / `{data}` | `HH:mm` / `AAAA-MM-DD`, no horário do aparelho |
+| `{deviceOwner}` / `{kiosk}` | `true` ou `false` |
+| `{lat}` / `{lon}` | Última posição conhecida (graus decimais; precisa da permissão de localização) |
+
+Exemplo com o login de outro sistema: `"urlInicial": "https://wms.exemplo.com/entrada?operador={usuario:Webmail}&aparelho={nome}"`.
+
+Cuidados: os valores são os do momento em que a página inicial é carregada (abertura do sistema, atualizar quando há erro ou o botão Início); um sistema que já está aberto na memória não recarrega só por ser aberto de novo. Antes de o usuário entrar, `{usuario}` vai vazio. Tudo na URL aparece em logs de servidor e proxy: login, rede e posição identificam pessoas, então use HTTPS e só o que o sistema precisa.
 
 Exemplo: `"urlInicial": "https://app.exemplo.com/painel?dispositivo={nome}&ip={ip}"` → `...?dispositivo=TABLET%2007&ip=192.168.0.15`. Só vale na primeira carga: se a página navegar para outro endereço, os parâmetros não vão junto. O valor é informado pelo aparelho e qualquer pessoa pode forjá-lo abrindo o link num navegador; serve para identificar e registrar, não para autenticar. O `urlPermitida` não considera a query string.
 

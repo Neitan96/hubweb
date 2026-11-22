@@ -54,13 +54,20 @@ class WebPool(
         activity.resources.openRawResource(R.raw.hubweb_user).bufferedReader().use { it.readText() }
     }
 
-    fun open(item: AppItem): Entry {
+    /**
+     * Abre (ou reaproveita) o sistema. [abrirEm] (opcional, de `abrirAoEntrar.url`) é a página em que ele abre no lugar da
+     * `urlInicial`; só vale se o item permitir esse endereço (`urlPermitida`), senão abre na `urlInicial`.
+     */
+    fun open(item: AppItem, abrirEm: String? = null): Entry {
         var entry = entries.remove(item.id)
         if (entry != null && entry.item != item) {
             destroy(entry)
             entry = null
         }
-        val e = entry ?: create(item)
+        val destino = abrirEm?.let { UrlVars.resolve(it, activity, item) }
+            ?.takeIf { u -> runCatching { Uri.parse(u).let { item.allows(it) && item.schemeAllowed(it) } }.getOrDefault(false) }
+        val e = entry ?: create(item, destino)
+        if (entry != null && destino != null) e.webView.loadUrl(destino) // já estava aberto: vai para a página pedida
         entries[item.id] = e
         while (entries.size > prefs.maxAlive.coerceAtLeast(1)) {
             val oldest = entries.values.first { it !== e }
@@ -121,7 +128,7 @@ class WebPool(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun create(item: AppItem): Entry {
+    private fun create(item: AppItem, abrirEm: String? = null): Entry {
         val entry = Entry(item)
         val wv = WebView(activity)
         entry.webView = wv
@@ -251,7 +258,7 @@ class WebPool(
             }
         })
 
-        val startUrl = item.startUrl(activity) // aplica {nome}, {ip}, ... da urlInicial
+        val startUrl = abrirEm ?: item.startUrl(activity) // aplica {nome}, {ip}, ... da urlInicial
         if (item.schemeAllowed(Uri.parse(startUrl))) wv.loadUrl(startUrl)
         else entry.error = "URL inicial usa HTTP, mas permitirHttp está desligado"
         return entry

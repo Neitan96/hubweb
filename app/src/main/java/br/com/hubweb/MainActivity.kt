@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
     private var crachaIdx by mutableStateOf(0) // detecção "cracha" em uso (o item pode ter várias detecções)
 
     private val handler = Handler(Looper.getMainLooper())
+    private var autoFeito = false // abrirAoEntrar já abriu o sistema nesta entrada no app
     private var lastInput = SystemClock.elapsedRealtime()
 
     // --- resultados de permissões / seletor de arquivos usados pelos WebViews ---
@@ -128,6 +129,7 @@ class MainActivity : ComponentActivity() {
             it.onApplied = {
                 if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) applyKiosk()
                 applyFabDefaults() // itens flutuantes novos na lista
+                if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) abrirAuto() // 1ª abertura: a lista acabou de chegar
                 telemetry.onConfigApplied() // primeira abertura: a lista acabou de chegar, envia a telemetria já
                 tips.refresh(gatilho = "config") // o bloco "dicas" pode ter aparecido, mudado de URL ou saído da lista
             }
@@ -139,6 +141,7 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(receiverMdm, filtroMdm, android.content.Context.RECEIVER_NOT_EXPORTED)
         else registerReceiver(receiverMdm, filtroMdm)
         tracker = UserTracker(prefs)
+        UrlVars.ligar(tracker, repo, prefs) // variáveis da urlInicial: {usuario}, {versaoLista}...
         pool = WebPool(this, prefs, tracker)
         telemetry = Telemetry(applicationContext, prefs, repo) {
             locationLauncher.launch(
@@ -339,6 +342,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (repo.abrirAoEntrar?.quando == "sempre") autoFeito = false // voltou ao app: pode abrir de novo
         if (ManagedConfig.apply(this, prefs)) { // mudou enquanto o app estava parado
             repo.refresh(force = true)
             tips.refresh(force = true)
@@ -356,6 +360,7 @@ class MainActivity : ComponentActivity() {
         current?.takeIf { screen == Screen.BROWSER }?.webView?.onResume()
         popupEntry?.webView?.onResume()
         AppStats.visivel(true)
+        abrirAuto()
         telemetry.start()
         handler.removeCallbacks(tick)
         handler.post(tick)
@@ -372,6 +377,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         try { unregisterReceiver(receiverMdm) } catch (_: Exception) {}
+        UrlVars.limpar()
         handler.removeCallbacks(tick)
         pool.destroyAll()
         super.onDestroy()
@@ -399,6 +405,18 @@ class MainActivity : ComponentActivity() {
             }
             handler.postDelayed(this, 15_000)
         }
+    }
+
+    /**
+     * `abrirAoEntrar` da lista: abre o sistema escolhido ao entrar no app. Só age no launcher (não tira o usuário das
+     * Configurações nem de um sistema), uma vez por entrada, e espera o crachá/primeiro uso resolver (sem lista, sem sistema).
+     */
+    private fun abrirAuto() {
+        val a = repo.abrirAoEntrar ?: return
+        if (autoFeito || screen != Screen.LAUNCHER || crachaItem != null) return
+        val item = repo.items.firstOrNull { it.nome.equals(a.sistema, ignoreCase = true) } ?: return
+        autoFeito = true
+        openApp(item, a.url)
     }
 
     /** A calculadora aparece: a lista a habilita e ela é obrigatória ou o usuário a ligou. */
@@ -509,8 +527,8 @@ class MainActivity : ComponentActivity() {
         pool.setPopupActive(null)
     }
 
-    private fun openApp(item: AppItem) {
-        val e = pool.open(item)
+    private fun openApp(item: AppItem, abrirEm: String? = null) {
+        val e = pool.open(item, abrirEm)
         current = e
         AppStats.abrirSistema(item.nome)
         screen = Screen.BROWSER

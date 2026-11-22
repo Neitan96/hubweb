@@ -110,8 +110,8 @@ object DeviceInfo {
     }
 }
 
-/** URL inicial do item com as variáveis do aparelho já aplicadas. */
-fun AppItem.startUrl(ctx: Context): String = DeviceInfo.resolveUrl(urlInicial, ctx)
+/** URL inicial do item com as variáveis já aplicadas: as do aparelho (DeviceInfo) e as extras (UrlVars). */
+fun AppItem.startUrl(ctx: Context): String = UrlVars.resolve(urlInicial, ctx, this)
 
 /**
  * Rodapé do launcher. `template` vem do JSON ("rodape"): ausente ou vazio = nada é mostrado.

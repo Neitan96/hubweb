@@ -12,6 +12,16 @@
   "novoToken": "token-novo",
   "novoToken_doc": "OPCIONAL. Troca o token Bearer da lista guardado no aparelho. Pode vir sozinho (mantém a URL) ou junto de novaConfigUrl; o app testa a lista com o token novo antes de adotar. \"\" apaga o token. Não vale para o token definido pelo MDM.",
 
+  "abrirAoEntrar": {
+    "sistema": "Webmail",
+    "sistema_doc": "OPCIONAL. Nome (o 'nome' de um item de 'apps') do sistema que o app abre sozinho ao entrar. Sem este bloco, o app fica no hub. Também aceita só o nome: \"abrirAoEntrar\": \"Webmail\". Se o nome não existir na lista, nada é aberto.",
+    "url": "https://mail.exemplo.com/caixa-de-entrada?usuario={usuario}",
+    "url_doc": "OPCIONAL. Página em que o sistema abre, no lugar da urlInicial (http ou https; aceita as mesmas variáveis da urlInicial). Só vale se casar com o urlPermitida do sistema; senão abre na urlInicial. Se o sistema já estava aberto, vai para esta página.",
+    "quando": "iniciar",
+    "quando_doc": "\"iniciar\" (padrão): só quando o app é aberto. \"sempre\": toda vez que o app volta ao primeiro plano (ex.: depois de a tela apagar ou de trocar de app). Só age quando o app está no hub; não tira o usuário das Configurações nem de um sistema aberto."
+  },
+  "abrirAoEntrar_doc": "OPCIONAL. Abre um sistema automaticamente ao entrar no app, em vez de parar no hub. O botão Voltar (ou o timeout de inatividade) leva ao hub, e ele não abre de novo até a próxima entrada. Sistemas com identificação por crachá obrigatória pedem o crachá, como ao abrir pelo hub.",
+
   "timeoutInatividadeMinutos": 30,
   "timeoutInatividadeMinutos_doc": "Minutos sem toque nem tecla (o leitor em modo teclado conta) até o app voltar ao launcher; também desliga os usuários por crachá. 0 desliga o timeout. De 0 a 1440; padrão 30 quando a chave não existe.",
 
@@ -144,7 +154,7 @@
       "nome": "Webmail",
       "nome_doc": "Nome do sistema: aparece no cartão do hub, na barra e nos eventos de usuário (obrigatório).",
       "urlInicial": "https://mail.exemplo.com/?dispositivo={nome}&ip={ip}",
-      "urlInicial_doc": "Primeira página do sistema (obrigatória). Aceita as variáveis do aparelho {nome}, {ip}, {modelo}, {android}, {app} e {id}, já codificadas para URL; elas valem só na primeira carga.",
+      "urlInicial_doc": "Primeira página do sistema (obrigatória). Aceita as variáveis do aparelho {nome}, {ip}, {modelo}, {android}, {app} e {id}, já codificadas para URL; elas valem só na primeira carga. Também aceita {usuario} (login atual neste sistema), {usuario:Nome do sistema} (o de outro sistema), {usuarioDesde}, {fabricante}, {bateria}, {carregando}, {ssid}, {redeTipo}, {sinalDbm}, {ramLivreMb}, {armazenamentoLivreMb}, {versaoLista}, {sistemaAnterior}, {hora}, {data}, {deviceOwner}, {kiosk}, {lat} e {lon}; o que o app não souber vira vazio. Tudo na URL aparece em logs de servidor: use HTTPS e só o que precisar.",
       "urlPermitida": ["mail.exemplo.com/*", "login.exemplo.com/*"],
       "urlPermitida_doc": "Endereços em que o sistema pode navegar: texto ou lista, no formato host/caminho com * (qualquer coisa) e ? (um caractere), sem a query. Qualquer navegação fora é bloqueada, e o aviso mostra o endereço bloqueado. Sem esta chave, vale o host da urlInicial.",
       "permitirCopiarColar": false,
