@@ -138,6 +138,23 @@ object MotorGecko {
         nova
     }
 
+    // A GeckoView que está na tela agora (a da tela ou a do popup): é nela que o leitor do coletor "digita".
+    private var viewAtiva: GeckoView? = null
+
+    /**
+     * Digita o texto no campo focado da página, como um teclado (o leitor do coletor entrega o código por Ctrl+V,
+     * que o app converte em teclas). Retorna false se não há página do Gecko na tela ou se o texto tem caracteres
+     * que o teclado virtual não mapeia.
+     */
+    fun digitar(texto: String): Boolean {
+        val v = viewAtiva ?: return false
+        val eventos = android.view.KeyCharacterMap.load(android.view.KeyCharacterMap.VIRTUAL_KEYBOARD)
+            .getEvents(texto.toCharArray()) ?: return false
+        v.requestFocus()
+        eventos.forEach { v.dispatchKeyEvent(it) }
+        return true
+    }
+
     /** Volta uma página; false se não houver para onde voltar (aí o app fecha o sistema). */
     fun voltar(): Boolean {
         val a = atual ?: return false
@@ -169,8 +186,8 @@ object MotorGecko {
                     }
                     AndroidView(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
-                        factory = { c -> GeckoView(c).apply { setSession(s.session) } },
-                        onRelease = { it.releaseSession() },
+                        factory = { c -> GeckoView(c).apply { setSession(s.session); viewAtiva = this } },
+                        onRelease = { if (viewAtiva === it) viewAtiva = null; it.releaseSession() },
                     )
                 }
             }
@@ -195,8 +212,8 @@ object MotorGecko {
         ) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                factory = { c -> GeckoView(c).apply { setSession(s.session) } },
-                onRelease = { it.releaseSession() }, // a sessão continua viva para quando o sistema for aberto de novo
+                factory = { c -> GeckoView(c).apply { setSession(s.session); viewAtiva = this } },
+                onRelease = { if (viewAtiva === it) viewAtiva = null; it.releaseSession() }, // a sessão continua viva para quando o sistema for aberto de novo
             )
         }
     }

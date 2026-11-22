@@ -412,15 +412,17 @@ class MainActivity : ComponentActivity() {
      * o WebView não: então o app cola o texto da área de transferência no campo focado da página.
      */
     private fun colarDoLeitor(event: KeyEvent): Boolean {
-        if (event.keyCode != KeyEvent.KEYCODE_V || !event.isCtrlPressed || screen != Screen.BROWSER) return false
-        val wv = current?.webView ?: return false
+        if (event.keyCode != KeyEvent.KEYCODE_V || !event.isCtrlPressed) return false
+        val noGecko = screen == Screen.GECKO || geckoPopup != null
+        val wv = current?.webView?.takeIf { screen == Screen.BROWSER }
+        if (wv == null && !noGecko) return false
         if (event.action != KeyEvent.ACTION_DOWN) return true // o ACTION_UP do mesmo atalho também é engolido
         val texto = runCatching {
             val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
             cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
         }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return false
-        runCatching { KeyInjector.type(wv, texto, "") }
-        return true
+        if (wv != null) { runCatching { KeyInjector.type(wv, texto, "") }; return true }
+        return runCatching { MotorGecko.digitar(texto.filterNot { it.isISOControl() }.trim()) }.getOrDefault(false)
     }
 
     private val tick = object : Runnable {

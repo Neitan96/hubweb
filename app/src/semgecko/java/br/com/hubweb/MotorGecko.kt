@@ -20,4 +20,6 @@ object MotorGecko {
 
     /** Volta uma página; false se não houver para onde voltar (aí o app fecha o sistema). */
     fun voltar(): Boolean = false
+
+    fun digitar(texto: String): Boolean = false
 }
