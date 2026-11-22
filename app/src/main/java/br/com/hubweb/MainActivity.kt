@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
     private var screen by mutableStateOf(Screen.LAUNCHER)
     private var current by mutableStateOf<Entry?>(null)
     private var geckoItem by mutableStateOf<AppItem?>(null) // sistema aberto no motor GeckoView (protótipo)
+    private var geckoPopup by mutableStateOf<AppItem?>(null) // botão flutuante aberto no GeckoView
     private var calcEnabled by mutableStateOf(false)
     private var fabsOn by mutableStateOf<Set<String>>(emptySet())
     private var showFabDialog by mutableStateOf(false)
@@ -294,6 +295,7 @@ class MainActivity : ComponentActivity() {
                             key(item.id) { ItemFab(prefs, item, slot = i + 1, userLocked = fabsLocked) { openPopup(item) } }
                         }
                     }
+                    geckoPopup?.let { gi -> MotorGecko.Popup(gi, gi.startUrl(this@MainActivity), onClose = ::closePopup) }
                     popupEntry?.let { pe ->
                         PopupBrowser(
                             pe,
@@ -485,6 +487,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openPopup(item: AppItem) {
+        // Motor GeckoView (protótipo): o popup também usa o Gecko; sem ele nesta build, abre no WebView.
+        if (item.motor == "gecko" && MotorGecko.disponivel) {
+            geckoPopup = item
+            return
+        }
         val e = pool.popup(item)
         popupEntry = e
         pool.setPopupActive(e)
@@ -529,6 +536,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun closePopup() {
+        geckoPopup = null
         popupEntry = null
         pool.setPopupActive(null)
     }

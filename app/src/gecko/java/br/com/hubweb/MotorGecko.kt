@@ -4,6 +4,19 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -52,7 +65,9 @@ object MotorGecko {
         GeckoRuntimeSettings.Builder().remoteDebuggingEnabled(BuildConfig.DEBUG).build(),
     ).also { runtime = it }
 
-    private fun sessao(ctx: Context, item: AppItem, urlInicial: String): Sessao = sessoes.getOrPut(item.id) {
+    // O popup (botão flutuante) tem sessão própria: o mesmo sistema pode estar aberto na tela e no popup ao mesmo tempo.
+    private fun sessao(ctx: Context, item: AppItem, urlInicial: String, popup: Boolean = false): Sessao =
+        sessoes.getOrPut((if (popup) "popup:" else "") + item.id) {
         val settings = GeckoSessionSettings.Builder().apply { item.userAgent?.let { userAgentOverride(it) } }.build()
         val s = GeckoSession(settings)
         val nova = Sessao(s)
@@ -72,6 +87,37 @@ object MotorGecko {
         if (!a.podeVoltar) return false
         a.session.goBack()
         return true
+    }
+
+    /** Popup do botão flutuante no Gecko: Voltar navega para trás e só fecha sem histórico. */
+    @Composable
+    fun Popup(item: AppItem, urlInicial: String, onClose: () -> Unit) {
+        val ctx = LocalContext.current
+        val s = remember(item.id) { sessao(ctx, item, urlInicial, popup = true) }
+        Dialog(
+            onDismissRequest = { if (s.podeVoltar) s.session.goBack() else onClose() },
+            properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+        ) {
+            Surface(Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.9f), shape = RoundedCornerShape(12.dp), tonalElevation = 6.dp) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).height(44.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(item.nome, Modifier.weight(1f).padding(start = 12.dp), maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                        if (item.barraAtualizar) IconButton(onClick = { s.session.reload() }) { Icon(Icons.Filled.Refresh, "Atualizar página") }
+                        if (item.barraInicio) IconButton(onClick = { s.session.loadUri(urlInicial) }) { Icon(Icons.Filled.Home, "Página inicial") }
+                        IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Fechar") }
+                    }
+                    AndroidView(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        factory = { c -> GeckoView(c).apply { setSession(s.session) } },
+                        onRelease = { it.releaseSession() },
+                    )
+                }
+            }
+        }
     }
 
     @Composable

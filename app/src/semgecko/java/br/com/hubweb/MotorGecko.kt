@@ -10,6 +10,10 @@ object MotorGecko {
     const val disponivel = false
 
     @Composable
+    fun Popup(item: AppItem, urlInicial: String, onClose: () -> Unit) {
+    }
+
+    @Composable
     fun Tela(item: AppItem, urlInicial: String, onLauncher: () -> Unit) {
     }
 
