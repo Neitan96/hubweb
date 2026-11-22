@@ -16,8 +16,9 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 
 # Chaves que o app lê, por bloco. "legado" = aceitas só por compatibilidade (não precisam estar no exemplo).
 $esperado = @{
-  'raiz'              = @('apps','fundoUrl','rodape','senhaSha256','senha','modoKiosk','aparencia','dicas','atualizacao','telemetria','eventos','calculadora')
+  'raiz'              = @('timeoutInatividadeMinutos','sistemasAbertos','apps','fundoUrl','rodape','senhaSha256','senha','modoKiosk','aparencia','dicas','atualizacao','telemetria','eventos','calculadora')
   'apps[]'            = @('nome','urlInicial','urlPermitida','icone','userAgent','permitirCopiarColar','permitirHttp','ordem','grupo','orientacao','zoom','permitirCamera','permitirUpload','permitirDownload','leitorCamera','leitorSufixo','barra','usuario','hub','flutuante','flutuanteObrigatorio','flutuanteInicial','flutuanteTravado','flutuantePosicao')
+  'sistemasAbertos[]' = @('ramMinimaMb','quantidade')
   'barra'             = @('visivel','voltar','atualizar','inicio')
   'aparencia'         = @('nome','logoUrl','logoAltura','ocultarAtualizar','ocultarConfiguracoes','ocultarUltimaAtualizacao','toquesSecreto','colunas')
   'dicas'             = @('url','token')
@@ -58,6 +59,7 @@ function Visita($o, [string]$bloco) {
       'raiz|telemetria'   { Visita $filho 'telemetria' }
       'raiz|eventos'      { Visita $filho 'eventos' }
       'raiz|calculadora'  { Visita $filho 'calculadora' }
+      'raiz|sistemasAbertos' { foreach ($i in @($filho)) { Visita $i 'sistemasAbertos[]' } }
       'raiz|apps'         { foreach ($i in @($filho)) { Visita $i 'apps[]' } }
       'calculadora|posicao' { Visita $filho 'posicao' }
       'apps[]|barra'      { Visita $filho 'barra' }

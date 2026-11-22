@@ -1,5 +1,6 @@
 package br.com.hubweb
 
+import android.app.ActivityManager
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -99,6 +100,9 @@ class Atualizacao(
 
 val REGRA_APP_PADRAO = RegraAtualizacao(intervaloSegundos = 21_600, quando = setOf("abrir", "hub"))
 
+/** Uma faixa de `sistemasAbertos`: a partir de [ramMinimaMb] de RAM, mantém [quantidade] sistemas abertos. */
+class FaixaRam(val ramMinimaMb: Long, val quantidade: Int)
+
 class Config(
     val items: List<AppItem>,
     val fundoUrl: String?,
@@ -114,6 +118,10 @@ class Config(
     val aparencia: Aparencia? = null,
     val dicas: DicasConfig? = null,
     val atualizacao: Atualizacao? = null,
+    /** Minutos sem toque/tecla até voltar ao launcher (0 = desligado); null = a lista não define (vale 30). */
+    val timeoutInatividadeMin: Int? = null,
+    /** Faixas de RAM para a quantidade de sistemas abertos; null = a lista não define (vale 2). */
+    val sistemasAbertos: List<FaixaRam>? = null,
 )
 
 /**
@@ -145,11 +153,38 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
     var dicas by mutableStateOf<DicasConfig?>(null); private set
     var atualizacao by mutableStateOf(Atualizacao()); private set
 
+    /** RAM total do aparelho em MB, como o Android informa (fica um pouco abaixo do valor nominal: 4 GB aparece como ~3700). */
+    val ramMb: Long = run {
+        val info = ActivityManager.MemoryInfo()
+        ctx.getSystemService(ActivityManager::class.java).getMemoryInfo(info)
+        info.totalMem / (1024 * 1024)
+    }
+
+    /** Valores em uso, vindos da lista (ou o padrão): timeout de inatividade e sistemas mantidos abertos. */
+    var timeoutMin by mutableStateOf(prefs.timeoutMin); private set
+    var sistemasAbertos by mutableStateOf(prefs.maxAlive); private set
+
     /** `modoKiosk` da última lista aplicada (null = a lista não define). Observável pela UI. */
     var modoKiosk by mutableStateOf(prefs.kioskRemote.let { if (it < 0) null else it == 1 }); private set
 
     /** Chamado na thread principal depois que uma lista nova foi aplicada. */
     var onApplied: (() -> Unit)? = null
+
+    /**
+     * Timeout de inatividade e quantidade de sistemas abertos vêm da lista. A quantidade sai da faixa de RAM de maior
+     * `ramMinimaMb` que o aparelho atinge (menos RAM que todas as faixas = 1). A lista sem estas chaves vale 30 min e 2.
+     * Os valores ficam em [Prefs], de onde o WebPool e a tela os leem.
+     */
+    private fun aplicarLimites(cfg: Config) {
+        val timeout = cfg.timeoutInatividadeMin ?: 30
+        val faixas = cfg.sistemasAbertos
+        val abertos = if (faixas.isNullOrEmpty()) 2
+        else faixas.filter { it.ramMinimaMb <= ramMb }.maxByOrNull { it.ramMinimaMb }?.quantidade ?: 1
+        prefs.timeoutMin = timeout
+        prefs.maxAlive = abertos
+        timeoutMin = timeout
+        sistemasAbertos = abertos
+    }
 
     fun loadCache() {
         if (!file.exists()) return
@@ -164,6 +199,7 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
             aparencia = cfg.aparencia ?: Aparencia()
             dicas = cfg.dicas
             atualizacao = cfg.atualizacao ?: Atualizacao()
+            aplicarLimites(cfg)
             lastUpdate = file.lastModified()
             cfg.senhaSha256?.let { prefs.passSha256 = it }
             prefs.kioskRemote = cfg.modoKiosk?.let { if (it) 1 else 0 } ?: -1
@@ -224,6 +260,7 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
                     aparencia = cfg.aparencia ?: Aparencia()
                     dicas = cfg.dicas
                     atualizacao = cfg.atualizacao ?: Atualizacao()
+            aplicarLimites(cfg)
                     lastUpdate = System.currentTimeMillis()
                     error = null
                     loading = false
@@ -604,7 +641,20 @@ class ConfigRepo(ctx: Context, private val prefs: Prefs) {
                     app = parseRegra(a.optJSONObject("app"), REGRA_APP_PADRAO),
                 )
             }
-            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao)
+            // "timeoutInatividadeMinutos": minutos sem toque/tecla até voltar ao launcher (0 = desligado).
+            val timeoutInatividade = if (root != null && root.has("timeoutInatividadeMinutos") && !root.isNull("timeoutInatividadeMinutos"))
+                root.optInt("timeoutInatividadeMinutos", 30).coerceIn(0, 1440) else null
+            // "sistemasAbertos": [{"ramMinimaMb": 0, "quantidade": 1}, ...] ou só um número.
+            val sistemasAbertos: List<FaixaRam>? = when (val v = root?.opt("sistemasAbertos")) {
+                is JSONArray -> (0 until v.length()).mapNotNull { i ->
+                    v.optJSONObject(i)?.let { o ->
+                        FaixaRam(o.optLong("ramMinimaMb", 0).coerceAtLeast(0), o.optInt("quantidade", 2).coerceIn(1, 6))
+                    }
+                }.takeIf { it.isNotEmpty() }
+                is Number -> listOf(FaixaRam(0, v.toInt().coerceIn(1, 6)))
+                else -> null
+            }
+            return Config(items, fundo, hash, kiosk, rodape, telemetria, eventos, calculadora, aparencia, dicas, atualizacao, timeoutInatividade, sistemasAbertos)
         }
 
         private fun JSONObject.str(k: String): String? = if (isNull(k)) null else optString(k)

@@ -10,19 +10,33 @@ fun sha256Hex(s: String): String =
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("hubweb", Context.MODE_PRIVATE)
 
+    /** URL da lista: a do MDM (configuração gerenciada), quando houver; senão a digitada nas Configurações. */
     var configUrl: String
-        get() = sp.getString("configUrl", "") ?: ""
+        get() = managedUrl.ifEmpty { sp.getString("configUrl", "") ?: "" }
         set(v) = sp.edit().putString("configUrl", v.trim()).apply()
 
     var token: String
-        get() = sp.getString("token", "") ?: ""
+        get() = managedToken.ifEmpty { sp.getString("token", "") ?: "" }
         set(v) = sp.edit().putString("token", v.trim()).apply()
 
-    /** Minutos sem toque/tecla até voltar ao launcher; 0 desativa. */
+    /** O que o MDM definiu (ManagedConfig); vazio = não definido. Quando há valor, ele manda e a tela o trava. */
+    var managedUrl: String
+        get() = sp.getString("managedUrl", "") ?: ""
+        set(v) = sp.edit().putString("managedUrl", v).apply()
+
+    var managedToken: String
+        get() = sp.getString("managedToken", "") ?: ""
+        set(v) = sp.edit().putString("managedToken", v).apply()
+
+    val urlGerenciada: Boolean get() = managedUrl.isNotEmpty()
+    val tokenGerenciado: Boolean get() = managedToken.isNotEmpty()
+
+    /** Minutos sem toque/tecla até voltar ao launcher; 0 desativa. Vem da lista (ConfigRepo.aplicarLimites). */
     var timeoutMin: Int
         get() = sp.getInt("timeoutMin", 30)
         set(v) = sp.edit().putInt("timeoutMin", v).apply()
 
+    /** Sistemas mantidos abertos, conforme a RAM e a lista (ConfigRepo.aplicarLimites). */
     var maxAlive: Int
         get() = sp.getInt("maxAlive", 2)
         set(v) = sp.edit().putInt("maxAlive", v).apply()

@@ -29,6 +29,11 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.HubWeb">
 
+        <!-- Configuração gerenciada (MDM): chaves em res/xml/app_restrictions.xml -->
+        <meta-data
+            android:name="android.content.APP_RESTRICTIONS"
+            android:resource="@xml/app_restrictions" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -5,11 +5,25 @@ Launcher de URLs para Android (Kotlin + Compose). Lista de sistemas vinda de um 
 ## Permissões
 O Android não pede permissões na instalação. O HubWeb pede todas na **primeira abertura**, de uma vez: localização (telemetria), câmera (sistemas que usam câmera) e, no Android 9 ou anterior, armazenamento (downloads). Não repete a cada início. O que o usuário negar volta a ser pedido sob demanda, quando o recurso for usado (se ele marcar "não perguntar de novo", só pelas configurações do Android: Apps → HubWeb → Permissões).
 
+## Configuração gerenciada (MDM)
+Com um MDM do Android Enterprise (Managed Google Play), o aparelho já pode sair configurado. O HubWeb declara duas chaves de configuração gerenciada (`res/xml/app_restrictions.xml`), que o console do MDM mostra como um formulário do app:
+
+| Chave | Tipo | O que faz |
+|---|---|---|
+| `configUrl` | texto | URL (http ou https) do JSON com a lista de sistemas |
+| `token` | texto | Token Bearer da lista (enviado só por HTTPS); opcional |
+
+- Quando o MDM define a `configUrl`, ela **vale no lugar da digitada** nas Configurações, e o campo fica travado (o `token`, igual). Sem valor no MDM, vale o que o usuário digitou, como sempre.
+- O app lê a configuração ao abrir e **quando o MDM a altera** (sem reabrir): ao mudar, ele busca a lista na hora.
+- O aparelho que já recebe a URL pelo MDM abre direto no hub, sem passar pelo primeiro setup. A senha de administração continua vindo da própria lista (`senhaSha256`).
+- **Como cadastrar:** no console do MDM, abra o HubWeb (app privado do Managed Google Play, ou o APK enviado pelo MDM) e use a configuração gerenciada de apps; os campos "URL da lista (JSON)" e "Token da lista" aparecem sozinhos. Os nomes exatos das chaves são `configUrl` e `token`.
+- **Device owner:** se o MDM é o device owner do aparelho, o HubWeb não pode ser (o kiosk que trava de verdade vem do MDM). Nesses aparelhos, ponha `atualizacao.app.ativo: false` na lista e deixe o MDM atualizar o app.
+
 ## Documentação dentro do app
 Em **Configurações** (precisa da senha de administração) há os botões **Documentação do JSON e do app** e **Exemplo de JSON**. Eles mostram este README e o `exemplo-apps.json`, sem precisar de internet; o exemplo tem um botão para copiar. Os dois arquivos são copiados do projeto para o app a cada build, então o app mostra sempre o texto do repositório.
 
 ## Primeiro uso
-1. Abra o app. Sem senha ainda, ele abre direto nas **Configurações**: informe a **URL do JSON** (e o token, se houver) e salve.
+1. Abra o app. Sem senha ainda, ele abre direto nas **Configurações**: informe a **URL do JSON** (e o token, se houver) e salve. Com MDM, a URL e o token podem vir da **configuração gerenciada** (veja a seção acima) e este passo some.
 2. A lista é buscada em segundo plano, conforme a regra `atualizacao.lista` do JSON (padrão: ao abrir o app, no mínimo a cada 60 s). Se a URL cair, vale o último JSON válido em cache.
 3. A senha de administração **vem do JSON** (raiz): `senhaSha256` (SHA-256 em hex, recomendado) ou `senha` (texto). O app guarda só o hash, para valer offline. Depois que a primeira lista com senha chega, as configurações passam a exigi-la. Se uma lista vier sem senha, a última continua valendo. Não há troca de senha no app: para mudar, altere o JSON. 5 erros bloqueiam por 5 min.
    - Sem senha no JSON, as configurações ficam abertas a qualquer um.
@@ -81,10 +95,27 @@ Campos de cada item de `apps`:
 
 ## Configurações do app
 - URL do JSON e token (Bearer, enviado só por HTTPS)
-- Timeout de inatividade (padrão 30 min, 0 desliga): volta ao launcher. Toque e tecla (inclusive leitor em modo teclado) zeram o contador
-- Quantidade de sistemas mantidos abertos (padrão 2)
+- Timeout de inatividade e quantidade de sistemas abertos: **vêm da lista** (veja "Inatividade e sistemas abertos"); as Configurações só os mostram, junto com a RAM detectada
 - Modo kiosk (padrão desligado)
 - Alterar senha / Encerrar o HubWeb
+
+## Inatividade e sistemas abertos (por RAM)
+Dois limites vêm da lista, na raiz do JSON:
+
+```json
+"timeoutInatividadeMinutos": 30,
+"sistemasAbertos": [
+  { "ramMinimaMb": 0,    "quantidade": 1 },
+  { "ramMinimaMb": 1800, "quantidade": 2 },
+  { "ramMinimaMb": 3500, "quantidade": 4 }
+]
+```
+
+- **`timeoutInatividadeMinutos`** (0 a 1440, padrão 30; 0 desliga): minutos sem toque nem tecla (o leitor em modo teclado também conta) até o app voltar ao launcher. Também desliga os usuários por crachá.
+- **`sistemasAbertos`**: quantos sistemas ficam abertos ao mesmo tempo (1 a 6; padrão 2 se a chave não existir). É uma lista de faixas: o app lê a **RAM total** do aparelho e usa a faixa de **maior `ramMinimaMb`** que ele atinge. Um aparelho com menos RAM que todas as faixas usa 1. Também aceita só um número (ex.: `"sistemasAbertos": 2`) para todos.
+- **Folga na RAM:** o Android informa a RAM um pouco abaixo da nominal (4 GB aparecem como cerca de 3700 MB; 3 GB, cerca de 2800 MB). Escolha os `ramMinimaMb` com folga. As **Configurações** mostram a RAM detectada e a quantidade em uso.
+- **Quando vale:** quando a lista é aplicada (e na lista em cache ao abrir o app). Se a quantidade diminuir, os sistemas que passam do limite são fechados na próxima abertura de um sistema, o menos recente primeiro.
+- Antes, estes dois valores eram campos das Configurações do app; agora só a lista os define.
 
 ## Dados do aparelho na URL inicial
 A `urlInicial` (no hub e no botão flutuante) aceita variáveis que o app troca por valores do aparelho, já codificados para URL, na abertura e também em atualizar/início:

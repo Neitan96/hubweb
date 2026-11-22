@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
+        ManagedConfig.apply(this, prefs) // URL e token vindos do MDM, antes de decidir a tela inicial
         resetSessionIfRebooted()
         repo = ConfigRepo(this, prefs).also {
             it.loadCache()
@@ -133,6 +134,10 @@ class MainActivity : ComponentActivity() {
         }
         tips = TipsRepo(this, prefs, repo).also { it.loadCache() }
         updater = AppUpdater(this, prefs, repo)
+        // O MDM pode mudar a configuração gerenciada com o app aberto: aplica e busca a lista na hora.
+        val filtroMdm = android.content.IntentFilter(android.content.Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED)
+        if (android.os.Build.VERSION.SDK_INT >= 33) registerReceiver(receiverMdm, filtroMdm, android.content.Context.RECEIVER_NOT_EXPORTED)
+        else registerReceiver(receiverMdm, filtroMdm)
         tracker = UserTracker(prefs)
         pool = WebPool(this, prefs, tracker)
         telemetry = Telemetry(applicationContext, prefs, repo) {
@@ -299,8 +304,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val receiverMdm = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+            if (ManagedConfig.apply(this@MainActivity, prefs)) {
+                repo.refresh(force = true)
+                tips.refresh(force = true)
+            }
+        }
+    }
+
     override fun onStart() {
         super.onStart()
+        if (ManagedConfig.apply(this, prefs)) { // mudou enquanto o app estava parado
+            repo.refresh(force = true)
+            tips.refresh(force = true)
+        }
         // Gatilho "abrir": o app foi aberto ou trazido para a frente. Cada busca só acontece se a lista permitir
         // esse gatilho e se o intervalo mínimo (atualizacao.lista / atualizacao.dicas) já passou.
         repo.refresh(gatilho = "abrir")
@@ -327,6 +345,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        try { unregisterReceiver(receiverMdm) } catch (_: Exception) {}
         handler.removeCallbacks(tick)
         pool.destroyAll()
         super.onDestroy()

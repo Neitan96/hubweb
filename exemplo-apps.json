@@ -7,6 +7,21 @@
   "fundoUrl": "https://exemplo.com/hubweb/fundo.png",
   "fundoUrl_doc": "Imagem de plano de fundo do hub (URL http ou https; PNG, JPG ou WebP; até 15 MB). Fica centralizada e nunca é ampliada. É baixada uma vez e guardada no aparelho; só baixa de novo se a URL mudar. Sem esta chave, o fundo é removido.",
 
+  "timeoutInatividadeMinutos": 30,
+  "timeoutInatividadeMinutos_doc": "Minutos sem toque nem tecla (o leitor em modo teclado conta) até o app voltar ao launcher; também desliga os usuários por crachá. 0 desliga o timeout. De 0 a 1440; padrão 30 quando a chave não existe.",
+
+  "sistemasAbertos": [
+    {
+      "ramMinimaMb": 0,
+      "ramMinimaMb_doc": "RAM total mínima do aparelho (em MB) para valer esta faixa. O app usa a faixa de MAIOR ramMinimaMb que o aparelho atinge. O Android informa a RAM um pouco abaixo da nominal (um aparelho de 4 GB aparece com cerca de 3700 MB; um de 3 GB, cerca de 2800 MB): deixe uma folga. Um aparelho com menos RAM que todas as faixas usa 1. A tela de Configurações mostra a RAM detectada.",
+      "quantidade": 1,
+      "quantidade_doc": "Quantos sistemas ficam abertos ao mesmo tempo nesta faixa, de 1 a 6. Os demais são fechados (o menos recente primeiro) e recarregam ao abrir de novo; os botões flutuantes não contam."
+    },
+    { "ramMinimaMb": 1800, "quantidade": 2 },
+    { "ramMinimaMb": 3500, "quantidade": 4 }
+  ],
+  "sistemasAbertos_doc": "Lista de faixas de RAM para a quantidade de sistemas mantidos abertos (cada um guarda a sessão e a página). Também aceita só um número (ex.: 2) para todos os aparelhos. Sem esta chave, vale 2.",
+
   "rodape": "{nome} · {ip}",
   "rodape_doc": "Texto fixo no rodapé do hub. Aceita as variáveis {nome} (nome do aparelho), {ip} (IPv4 local), {modelo}, {android}, {app} (versão do HubWeb), {id} (Android ID) e {atualizacao} (hora da última lista recebida); use \\n para quebrar linha (até 3 linhas). Atualiza a cada 10 s. Sem esta chave, ou com texto vazio, nada é mostrado.",
 

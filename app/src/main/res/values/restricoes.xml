@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="restr_url_titulo">URL da lista (JSON)</string>
+    <string name="restr_url_desc">Endereço http ou https do JSON com a lista de sistemas. Quando definido, vale no lugar do digitado nas Configurações do app.</string>
+    <string name="restr_token_titulo">Token da lista</string>
+    <string name="restr_token_desc">Token Bearer enviado ao servidor da lista (só por HTTPS). Opcional.</string>
+</resources>

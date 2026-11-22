@@ -440,8 +440,6 @@ fun SettingsScreen(
 ) {
     var url by remember { mutableStateOf(prefs.configUrl) }
     var token by remember { mutableStateOf(prefs.token) }
-    var timeout by remember { mutableStateOf(prefs.timeoutMin.toString()) }
-    var alive by remember { mutableStateOf(prefs.maxAlive.toString()) }
     val ctx = LocalContext.current
     var isOwner by remember { mutableStateOf(ctx.getSystemService(DevicePolicyManager::class.java).isDeviceOwnerApp(ctx.packageName)) }
     var confirmRemoveOwner by remember { mutableStateOf(false) }
@@ -450,9 +448,7 @@ fun SettingsScreen(
     var kiosk by remember { mutableStateOf(prefs.kioskLocal) }
 
     val urlOk = url.isBlank() || url.startsWith("https://", true) || url.startsWith("http://", true)
-    val timeoutVal = timeout.toIntOrNull()
-    val aliveVal = alive.toIntOrNull()
-    val valid = urlOk && timeoutVal != null && timeoutVal in 0..1440 && aliveVal != null && aliveVal in 1..6
+    val valid = urlOk
 
     Column(
         Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
@@ -465,14 +461,23 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodySmall,
         )
 
+        if (prefs.urlGerenciada || prefs.tokenGerenciado) {
+            Text(
+                "Definido pelo MDM (configuração gerenciada): " +
+                    listOfNotNull("URL".takeIf { prefs.urlGerenciada }, "token".takeIf { prefs.tokenGerenciado }).joinToString(" e ") +
+                    ". Para mudar, altere a configuração do app no MDM.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         OutlinedTextField(
-            url, { url = it }, Modifier.fillMaxWidth(),
+            url, { url = it }, Modifier.fillMaxWidth(), enabled = !prefs.urlGerenciada,
             label = { Text(if (urlOk) "URL do JSON com a lista" else "Use http:// ou https://") },
             isError = !urlOk, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
         )
         OutlinedTextField(
-            token, { token = it }, Modifier.fillMaxWidth(),
+            token, { token = it }, Modifier.fillMaxWidth(), enabled = !prefs.tokenGerenciado,
             label = { Text("Token (opcional, enviado como Bearer só em HTTPS)") }, singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
         )
@@ -527,17 +532,15 @@ fun SettingsScreen(
         )
 
         HorizontalDivider()
-        OutlinedTextField(
-            timeout, { timeout = it.filter(Char::isDigit).take(4) }, Modifier.fillMaxWidth(),
-            label = { Text("Timeout de inatividade (min, 0 = desligado)") }, singleLine = true,
-            isError = timeoutVal == null || timeoutVal !in 0..1440,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        // Estes dois valores vêm da lista (timeoutInatividadeMinutos e sistemasAbertos); aqui só se mostram.
+        Text(
+            "Timeout de inatividade: " + (if (repo.timeoutMin > 0) "${repo.timeoutMin} min" else "desligado") +
+                " (lista: timeoutInatividadeMinutos; padrão 30).",
+            style = MaterialTheme.typography.bodySmall,
         )
-        OutlinedTextField(
-            alive, { alive = it.filter(Char::isDigit).take(1) }, Modifier.fillMaxWidth(),
-            label = { Text("Sistemas mantidos abertos (1 a 6)") }, singleLine = true,
-            isError = aliveVal == null || aliveVal !in 1..6,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        Text(
+            "Sistemas mantidos abertos: ${repo.sistemasAbertos} (RAM do aparelho: ${repo.ramMb} MB; lista: sistemasAbertos; padrão 2).",
+            style = MaterialTheme.typography.bodySmall,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -581,10 +584,8 @@ fun SettingsScreen(
         HorizontalDivider()
         Button(
             onClick = {
-                prefs.configUrl = url
-                prefs.token = token
-                prefs.timeoutMin = timeoutVal!!
-                prefs.maxAlive = aliveVal!!
+                if (!prefs.urlGerenciada) prefs.configUrl = url // o valor do MDM não vira cópia local
+                if (!prefs.tokenGerenciado) prefs.token = token
                 prefs.kioskLocal = kiosk
                 onSaved()
             },

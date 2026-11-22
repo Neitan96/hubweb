@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chaves de configuração gerenciada (MDM). Veja ManagedConfig.kt. -->
+<restrictions xmlns:android="http://schemas.android.com/apk/res/android">
+    <restriction
+        android:key="configUrl"
+        android:title="@string/restr_url_titulo"
+        android:description="@string/restr_url_desc"
+        android:restrictionType="string"
+        android:defaultValue="" />
+    <restriction
+        android:key="token"
+        android:title="@string/restr_token_titulo"
+        android:description="@string/restr_token_desc"
+        android:restrictionType="string"
+        android:defaultValue="" />
+</restrictions>
