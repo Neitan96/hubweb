@@ -51,10 +51,19 @@ object UrlVars {
         "deviceOwner", "kiosk", "lat", "lon", "urmoboNome", "urmoboId", "urmoboSerial", "urmoboImei", "urmoboDado",
     )
 
-    /** `{nome}` ou `{nome:argumento}` (o argumento só serve para `usuario` e `usuarioDesde`). */
+    // Variáveis do aparelho (DeviceInfo) e {atualizacao} (só no rodapé).
+    private val DISPOSITIVO = setOf("nome", "ip", "modelo", "android", "app", "id", "atualizacao")
+
+    /** Nome sem maiúsculas nem "_" -> nome oficial; assim {urmobo_nome} e {urmoboNome} são a mesma variável. */
+    private val CANON: Map<String, String> by lazy { (NOMES + DISPOSITIVO).associateBy { it.replace("_", "").lowercase() } }
+
+    /**
+     * `{a}`, `{a:argumento}` ou uma cadeia `{a|b|"texto"}`: vale o primeiro valor não vazio; um texto entre aspas encerra
+     * a cadeia. O argumento só serve para `usuario`, `usuarioDesde` e `urmoboDado`.
+     */
     // As chaves precisam de barra invertida: o regex do Android (ICU) rejeita "}" solta, e isso derrubava o app ao abrir.
     // Lazy: um erro aqui nunca pode acontecer na inicialização do app.
-    private val REGEX by lazy { Regex("""\{([A-Za-z]+)(?::([^\}]*))?\}""") }
+    private val BLOCO by lazy { Regex("""\{([^\{\}]+)\}""") }
 
     // Mudam o tempo todo: não contam para "recarregarAoMudar".
     private val VOLATEIS = setOf(
@@ -65,8 +74,7 @@ object UrlVars {
     fun chaveEstavel(item: AppItem, ctx: Context): String? {
         if ('{' !in item.urlInicial) return null
         return try {
-            val sem = REGEX.replace(item.urlInicial) { m -> if (m.groupValues[1] in VOLATEIS) "" else m.value }
-            resolve(sem, ctx, item)
+            expandir(item.urlInicial, ctx, item, paraUrl = true, ignorar = VOLATEIS)
         } catch (_: Exception) {
             null
         }
@@ -75,25 +83,66 @@ object UrlVars {
     fun resolve(url: String, ctx: Context, item: AppItem): String {
         if ('{' !in url) return url
         return try {
-            resolverVariaveis(url, ctx, item)
+            expandir(url, ctx, item, paraUrl = true)
         } catch (_: Exception) {
             DeviceInfo.resolveUrl(url, ctx) // sem as variáveis extras, mas a página inicial abre
         }
     }
 
-    private fun resolverVariaveis(url: String, ctx: Context, item: AppItem): String {
+    /**
+     * Troca os `{...}` de [texto] pelos valores. [paraUrl]: codifica cada valor para URL (rodapé: texto puro, e `{ip}` sem
+     * rede vira "sem rede"). [ignorar]: variáveis tratadas como vazias (usado para detectar mudança). Um bloco sem nenhum
+     * nome conhecido fica como escrito; um bloco conhecido sem valor nenhum vira vazio.
+     */
+    fun expandir(
+        texto: String, ctx: Context, item: AppItem?, paraUrl: Boolean,
+        ultimaAtualizacao: Long = 0, ignorar: Set<String> = emptySet(),
+    ): String {
+        if ('{' !in texto) return texto
         val app = ctx.applicationContext
-        val out = REGEX.replace(url) { m ->
-            val nome = m.groupValues[1]
-            if (nome !in NOMES) m.value
-            else Uri.encode(runCatching { valor(nome, m.groups[2]?.value, app, item) }.getOrNull().orEmpty())
+        return BLOCO.replace(texto) { m ->
+            var conhecido = false
+            var primeira: String? = null
+            for (parte in dividir(m.groupValues[1])) {
+                val t = parte.trim()
+                if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) { // texto fixo: encerra a cadeia
+                    val lit = t.substring(1, t.length - 1)
+                    return@replace if (paraUrl) Uri.encode(lit) else lit
+                }
+                val nome = CANON[t.substringBefore(':').trim().replace("_", "").lowercase()] ?: continue
+                conhecido = true
+                if (primeira == null) primeira = nome
+                if (nome in ignorar) continue
+                val arg = if (':' in t) t.substringAfter(':').trim() else null
+                val v = runCatching { valor(nome, arg, app, item, ultimaAtualizacao) }.getOrNull().orEmpty()
+                if (v.isNotEmpty()) return@replace if (paraUrl) Uri.encode(v) else v
+            }
+            when {
+                !conhecido -> m.value
+                !paraUrl && primeira == "ip" -> "sem rede"
+                else -> ""
+            }
         }
-        return DeviceInfo.resolveUrl(out, ctx) // {nome} {ip} {modelo} {android} {app} {id}
     }
 
-    private fun valor(nome: String, arg: String?, ctx: Context, item: AppItem): String = when (nome) {
-        "usuario" -> usuario(arg ?: item.nome)?.login.orEmpty()
-        "usuarioDesde" -> usuario(arg ?: item.nome)?.let { DeviceStats.iso(it.desde) }.orEmpty()
+    /** Divide por "|" sem cortar dentro de aspas. */
+    private fun dividir(s: String): List<String> {
+        val out = ArrayList<String>()
+        val atual = StringBuilder()
+        var aspas = false
+        for (c in s) {
+            if (c == '"') aspas = !aspas
+            if (c == '|' && !aspas) { out += atual.toString(); atual.clear() } else atual.append(c)
+        }
+        out += atual.toString()
+        return out
+    }
+
+    private fun valor(nome: String, arg: String?, ctx: Context, item: AppItem?, ultimaAtualizacao: Long): String = when (nome) {
+        "nome", "ip", "modelo", "android", "app", "id" -> DeviceInfo.valorDe(nome, ctx).orEmpty()
+        "atualizacao" -> if (ultimaAtualizacao > 0) SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(ultimaAtualizacao)) else "-"
+        "usuario" -> usuario(arg ?: item?.nome.orEmpty())?.login.orEmpty()
+        "usuarioDesde" -> usuario(arg ?: item?.nome.orEmpty())?.let { DeviceStats.iso(it.desde) }.orEmpty()
         "fabricante" -> Build.MANUFACTURER.orEmpty()
         "bateria" -> bateria(ctx)?.first?.toString().orEmpty()
         "carregando" -> bateria(ctx)?.second?.toString().orEmpty()
@@ -107,7 +156,7 @@ object UrlVars {
         }
         "armazenamentoLivreMb" -> (StatFs(Environment.getDataDirectory().path).availableBytes / (1024 * 1024)).toString()
         "versaoLista" -> repo?.versaoLista?.toString().orEmpty()
-        "sistemaAnterior" -> AppStats.anterior(item.nome).orEmpty()
+        "sistemaAnterior" -> item?.let { AppStats.anterior(it.nome) }.orEmpty()
         "hora" -> SimpleDateFormat("HH:mm", Locale.US).format(Date())
         "data" -> SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         "deviceOwner" -> ctx.getSystemService(DevicePolicyManager::class.java).isDeviceOwnerApp(ctx.packageName).toString()

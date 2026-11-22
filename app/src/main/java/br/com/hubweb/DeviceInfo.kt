@@ -88,9 +88,24 @@ object DeviceInfo {
             .also { runCatching { UrmoboInfo.acrescentar(ctx, it) } }, // urmobo_* se o Urmobo respondeu
     ).toString().toByteArray(Charsets.UTF_8)
 
-    /** Rodapé: troca {nome} {ip} {modelo} {android} {app} {id} {atualizacao}; o resto fica como escrito. */
+    /** Valor de uma variável do aparelho (nome sem chaves); null se não for uma delas. {ip} sem rede vem vazio. */
+    fun valorDe(nome: String, ctx: Context): String? = when (nome) {
+        "nome" -> name(ctx)
+        "ip" -> ipv4().orEmpty()
+        "modelo" -> model()
+        "android" -> Build.VERSION.RELEASE.orEmpty()
+        "app" -> appVersion(ctx)
+        "id" -> androidId(ctx)
+        else -> null
+    }
+
+    /** Rodapé: todas as variáveis da urlInicial (veja [UrlVars.expandir]) e {atualizacao}; o resto fica como escrito. */
     fun render(template: String, ctx: Context, lastUpdate: Long): String {
-        var out = template
+        try {
+            return UrlVars.expandir(template, ctx, null, paraUrl = false, ultimaAtualizacao = lastUpdate)
+        } catch (_: Exception) {
+        }
+        var out = template // se algo falhar: só as variáveis básicas
         for (key in URL_VARS + "{atualizacao}") {
             if (key in out) out = out.replace(key, value(key, ctx, lastUpdate, forUrl = false))
         }

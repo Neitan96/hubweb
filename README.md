@@ -124,6 +124,20 @@ Se o app **Urmobo MDM** (`com.urmobo.mdm`) estiver instalado, o HubWeb pede a el
 - Sem o Urmobo instalado, ou antes da primeira resposta, essas chaves não vão. A resposta fica guardada, então o POST seguinte já as leva.
 - As mesmas informações valem como variáveis da `urlInicial` (`{urmoboNome}`, `{urmoboId}`, `{urmoboSerial}`, `{urmoboImei}`, `{urmoboDado:descrição}`; veja a tabela de variáveis).
 - O token da entidade que o Urmobo também devolve não é guardado nem enviado.
+- `urmobo_resposta_ms` (em `dispositivo`) é quanto o Urmobo levou para responder à última pergunta, em milissegundos.
+- A última resposta fica guardada no aparelho (sobrevive ao fechar o app). Na **primeira** vez, com o Urmobo instalado e nada guardado, a telemetria de abertura espera a resposta por até 10 s e sai assim que ela chega; nas demais, envia na hora.
+
+### Valor alternativo `{a|b|"texto"}`
+Na `urlInicial` e no `rodape`, uma variável pode ter alternativas separadas por `|`: vale a **primeira com valor** (vazio conta como sem valor). Um texto entre aspas encerra a cadeia:
+
+| Exemplo | Resultado |
+|---|---|
+| `{urmoboNome\|nome}` | O nome do cadastro no Urmobo; se não houver, o nome do aparelho |
+| `{urmoboNome\|nome\|modelo}` | Mais uma alternativa: o modelo |
+| `{urmoboNome\|"sem nome"}` | O nome no Urmobo, ou o texto "sem nome" |
+| `{usuario:Sistema X\|nome}` | O login no sistema X; se não houver, o nome do aparelho |
+
+Nomes aceitam `urmobo_nome` ou `urmoboNome` (maiúsculas e `_` não importam). Num bloco sem nenhum nome conhecido, o texto fica como escrito. Nas URLs o valor sai codificado; no rodapé, `{ip}` sem rede mostra "sem rede" (a menos que haja alternativa).
 - A imagem de fundo e o logo continuam sendo baixados com GET.
 
 ## Abrir um sistema ao entrar no app
@@ -773,6 +787,8 @@ Texto fixo na parte inferior do launcher, definido pelo campo `rodape` (raiz do 
 | `{app}` | Versão do HubWeb |
 | `{id}` | Android ID do aparelho |
 | `{atualizacao}` | Data/hora da última lista recebida |
+
+O rodapé aceita **todas** as variáveis da `urlInicial` (`{usuario:Sistema}`, `{ssid}`, `{bateria}`, `{urmoboNome}`...) e o valor alternativo `{a|b|"texto"}` (veja "Valor alternativo" abaixo).
 
 Exemplos: `"rodape": "{nome} · {ip}"`, `"rodape": "Expedição | {nome} | {ip} | v{app}"`, texto sem variáveis (`"Setor Expedição"`) ou várias linhas com `\n`. **Sem o campo `rodape` (ou com `""`), nada é mostrado.** Variáveis desconhecidas ficam como escritas.
 

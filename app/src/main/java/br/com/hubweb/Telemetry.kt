@@ -50,6 +50,7 @@ class Telemetry(
     private var sentSinceStart = false // já enviou nesta entrada no app
     private var lastSendAt = 0L // SystemClock.elapsedRealtime() do último envio
     private var askedPermission = false
+    private var esperouUrmobo = false // a espera pela 1ª resposta do Urmobo acontece só uma vez por abertura do app
     private var listeningEvery = 0 // 0 = sem escuta de localização
     private var best: Location? = null
 
@@ -97,6 +98,19 @@ class Telemetry(
     private val tick = object : Runnable {
         override fun run() {
             if (!running) return
+            // Primeira vez com o Urmobo instalado e sem resposta guardada: espera por ela (até 10 s) antes de enviar.
+            if (!esperouUrmobo) {
+                esperouUrmobo = true
+                if (UrmoboInfo.deveEsperar(ctx)) {
+                    UrmoboInfo.aoResponder = {
+                        handler.removeCallbacks(this)
+                        handler.post(this)
+                    }
+                    handler.postDelayed(this, ESPERA_URMOBO_MS)
+                    return
+                }
+            }
+            UrmoboInfo.aoResponder = null
             val cfg = repo.telemetria
             var delayMs = 30_000L
             if (cfg != null) {
@@ -480,5 +494,6 @@ class Telemetry(
     private companion object {
         /** Intervalo mínimo entre o envio ao entrar no app e o anterior. */
         const val MIN_ENTRE_ENVIOS_MS = 10_000L
+        const val ESPERA_URMOBO_MS = 10_000L
     }
 }
