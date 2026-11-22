@@ -360,6 +360,7 @@ class MainActivity : ComponentActivity() {
         current?.takeIf { screen == Screen.BROWSER }?.webView?.onResume()
         popupEntry?.webView?.onResume()
         AppStats.visivel(true)
+        UrmoboInfo.pedir(this) // nome/ID/serial do cadastro no Urmobo (se instalado); a resposta chega depois
         abrirAuto()
         telemetry.start()
         handler.removeCallbacks(tick)

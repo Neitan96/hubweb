@@ -84,7 +84,8 @@ object DeviceInfo {
             .put("id", androidId(ctx))
             .put("modelo", model())
             .put("android", Build.VERSION.RELEASE.orEmpty())
-            .put("app", appVersion(ctx)),
+            .put("app", appVersion(ctx))
+            .also { runCatching { UrmoboInfo.acrescentar(ctx, it) } }, // urmobo_* se o Urmobo respondeu
     ).toString().toByteArray(Charsets.UTF_8)
 
     /** Rodapé: troca {nome} {ip} {modelo} {android} {app} {id} {atualizacao}; o resto fica como escrito. */

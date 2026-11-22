@@ -111,6 +111,19 @@ A **lista** e as **dicas** são buscadas com **POST**, e o corpo traz os dados d
 - O servidor pode usá-los para devolver uma lista (e dicas) diferente por aparelho, na mesma URL. Quem não os usa devolve a mesma lista para todos.
 - **O endereço da lista e o das dicas precisam aceitar POST** (e a resposta continua sendo o JSON). Um servidor que só aceita GET devolve erro, e o aparelho fica com a última lista que já tem. Atenção a redirecionamentos (301/302): o Android os refaz como GET.
 - Os dados vão ao servidor que você configurou; o `id` e o `nome` identificam o aparelho, então use HTTPS.
+
+### Integração com o Urmobo MDM
+Se o app **Urmobo MDM** (`com.urmobo.mdm`) estiver instalado, o HubWeb pede a ele (ao abrir o app, no máximo uma vez por minuto) os dados do cadastro do aparelho. Quando o Urmobo responde, o objeto `dispositivo` da telemetria e do POST da lista ganha:
+
+```json
+"urmobo_nome": "COLETOR-07", "urmobo_id": "...", "urmobo_serial": "...", "urmobo_imei": "...",
+"urmobo_dados": { "Setor": "Estoque", "Unidade": "Matriz" }
+```
+
+- `urmobo_nome` é o nome do cadastro no painel do Urmobo; **não substitui** o `nome` (o do Android). `urmobo_dados` são os dados auxiliares do cadastro, por descrição.
+- Sem o Urmobo instalado, ou antes da primeira resposta, essas chaves não vão. A resposta fica guardada, então o POST seguinte já as leva.
+- As mesmas informações valem como variáveis da `urlInicial` (`{urmoboNome}`, `{urmoboId}`, `{urmoboSerial}`, `{urmoboImei}`, `{urmoboDado:descrição}`; veja a tabela de variáveis).
+- O token da entidade que o Urmobo também devolve não é guardado nem enviado.
 - A imagem de fundo e o logo continuam sendo baixados com GET.
 
 ## Abrir um sistema ao entrar no app
@@ -189,6 +202,8 @@ A `urlInicial` (no hub e no botão flutuante) aceita variáveis que o app troca 
 | `{sistemaAnterior}` | O sistema aberto antes deste |
 | `{hora}` / `{data}` | `HH:mm` / `AAAA-MM-DD`, no horário do aparelho |
 | `{deviceOwner}` / `{kiosk}` | `true` ou `false` |
+| `{urmoboNome}` `{urmoboId}` `{urmoboSerial}` `{urmoboImei}` | Dados do cadastro do aparelho no Urmobo MDM (veja "Integração com o Urmobo MDM"); vazio sem o Urmobo |
+| `{urmoboDado:descrição}` | Um dado auxiliar do cadastro no Urmobo, pela descrição (ex.: `{urmoboDado:Setor}`) |
 | `{lat}` / `{lon}` | Última posição conhecida (graus decimais; precisa da permissão de localização) |
 
 Exemplo com o login de outro sistema: `"urlInicial": "https://wms.exemplo.com/entrada?operador={usuario:Webmail}&aparelho={nome}"`.
@@ -198,6 +213,8 @@ Cuidados: os valores são os do momento em que a página inicial é carregada (a
 Exemplo: `"urlInicial": "https://app.exemplo.com/painel?dispositivo={nome}&ip={ip}"` → `...?dispositivo=TABLET%2007&ip=192.168.0.15`. Só vale na primeira carga: se a página navegar para outro endereço, os parâmetros não vão junto. O valor é informado pelo aparelho e qualquer pessoa pode forjá-lo abrindo o link num navegador; serve para identificar e registrar, não para autenticar. O `urlPermitida` não considera a query string.
 
 ## Telemetria (POST periódico)
+> Nas **Configurações** (com a telemetria ligada na lista) há os botões **Enviar telemetria agora** (envia na hora, sem esperar o intervalo) e **Ver a última enviada** (mostra o JSON exato do último envio, sem o token; some ao fechar o app).
+
 Objeto `telemetria` na raiz do JSON. Enquanto o app está **aberto em primeiro plano** (entre abrir e sair/ir para outro app), ele envia um POST JSON a cada `frequenciaSegundos`. **Ao entrar no app (abrir ou voltar a ele) já envia uma telemetria na hora**, sem esperar o primeiro intervalo, com a última localização conhecida do aparelho. Entradas seguidas em menos de 10 s (por exemplo, ao voltar do leitor de código ou de um diálogo de permissão) não repetem o envio. Na primeira abertura, sem lista em cache, o envio sai assim que a lista chega. Não envia em segundo plano nem com a tela bloqueada.
 
 ```json

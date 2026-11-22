@@ -70,6 +70,17 @@ class Telemetry(
     /** Resultado do último envio, para mostrar nas configurações. */
     var status by mutableStateOf<String?>(null); private set
 
+    /** O JSON da última telemetria enviada (identado, sem o token), para ver nas configurações; só vale até o app fechar. */
+    var ultimoEnvio by mutableStateOf<String?>(null); private set
+
+    /** Envia uma telemetria agora (botão das configurações), sem esperar o intervalo. */
+    fun enviarAgora() {
+        handler.post {
+            val cfg = repo.telemetria
+            if (cfg == null) status = "telemetria desligada (a lista não define \"telemetria\")" else send(cfg)
+        }
+    }
+
     private val listener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             if (better(location)) best = location
@@ -198,6 +209,7 @@ class Telemetry(
             return
         }
         sondar(cfg.url)
+        ultimoEnvio = runCatching { JSONObject(body).toString(2) }.getOrDefault(body)
         post(cfg.url, tokenFor(cfg.url, cfg.token), body) { result ->
             if (result != "OK") AppStats.devolverUso(uso)
             val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
@@ -355,6 +367,7 @@ class Telemetry(
         put("modelo", DeviceInfo.model())
         put("android", Build.VERSION.RELEASE.orEmpty())
         put("app", appVersion())
+        runCatching { UrmoboInfo.acrescentar(ctx, this) } // urmobo_* se o Urmobo respondeu
     }
 
     @Suppress("DEPRECATION")

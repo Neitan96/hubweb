@@ -44,8 +44,8 @@ android {
         applicationId = "br.com.hubweb"
         minSdk = 24
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.0.11"
+        versionCode = 14
+        versionName = "1.0.13"
         buildConfigField("String", "EMPRESA_URL", (empProps.getProperty("configUrl") ?: "").trim().paraBuildConfig())
         buildConfigField("String", "EMPRESA_TOKEN", (empProps.getProperty("token") ?: "").trim().paraBuildConfig())
     }

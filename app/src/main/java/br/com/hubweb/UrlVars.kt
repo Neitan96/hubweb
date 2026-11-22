@@ -48,7 +48,7 @@ object UrlVars {
     private val NOMES = setOf(
         "usuario", "usuarioDesde", "fabricante", "bateria", "carregando", "ssid", "redeTipo", "sinalDbm",
         "ramLivreMb", "armazenamentoLivreMb", "versaoLista", "sistemaAnterior", "hora", "data",
-        "deviceOwner", "kiosk", "lat", "lon",
+        "deviceOwner", "kiosk", "lat", "lon", "urmoboNome", "urmoboId", "urmoboSerial", "urmoboImei", "urmoboDado",
     )
 
     /** `{nome}` ou `{nome:argumento}` (o argumento só serve para `usuario` e `usuarioDesde`). */
@@ -112,6 +112,11 @@ object UrlVars {
         "data" -> SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         "deviceOwner" -> ctx.getSystemService(DevicePolicyManager::class.java).isDeviceOwnerApp(ctx.packageName).toString()
         "kiosk" -> (prefs?.kiosk ?: false).toString()
+        "urmoboNome" -> UrmoboInfo.dados(ctx)?.nome.orEmpty()
+        "urmoboId" -> UrmoboInfo.dados(ctx)?.id.orEmpty()
+        "urmoboSerial" -> UrmoboInfo.dados(ctx)?.serial.orEmpty()
+        "urmoboImei" -> UrmoboInfo.dados(ctx)?.imei.orEmpty()
+        "urmoboDado" -> UrmoboInfo.dado(UrmoboInfo.dados(ctx), arg)
         "lat" -> ultimaPosicao(ctx)?.let { "%.6f".format(Locale.US, it.latitude) }.orEmpty()
         "lon" -> ultimaPosicao(ctx)?.let { "%.6f".format(Locale.US, it.longitude) }.orEmpty()
         else -> ""

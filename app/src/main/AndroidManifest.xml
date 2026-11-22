@@ -16,6 +16,11 @@
     <!-- Atualização do próprio app (verificação de versão nova no GitHub, regra atualizacao.app da lista). Retire esta linha e o código de AppUpdate.kt em versões publicadas na Play Store. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Urmobo MDM: saber se está instalado e pedir o nome/ID/serial do cadastro (Urmobo.kt). -->
+    <queries>
+        <package android:name="com.urmobo.mdm" />
+    </queries>
+
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
@@ -47,6 +52,7 @@
         </activity>
 
         <receiver android:name=".UpdateReceiver" android:exported="false" />
+        <receiver android:name=".UrmoboReceiver" android:exported="false" />
         <receiver android:name=".ReplacedReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />

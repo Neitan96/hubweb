@@ -444,6 +444,7 @@ fun SettingsScreen(
     var isOwner by remember { mutableStateOf(ctx.getSystemService(DevicePolicyManager::class.java).isDeviceOwnerApp(ctx.packageName)) }
     var confirmRemoveOwner by remember { mutableStateOf(false) }
     var docsTab by remember { mutableStateOf<Int?>(null) } // 0 = documentação, 1 = exemplo de JSON
+    var verTelemetria by remember { mutableStateOf(false) }
     val kioskForced = repo.modoKiosk != null // a lista define o modo kiosk
     var kiosk by remember { mutableStateOf(prefs.kioskLocal) }
 
@@ -506,6 +507,12 @@ fun SettingsScreen(
                 "${tel.url.substringAfter("://").substringBefore('/')} · ${telemetry.status ?: "aguardando o primeiro envio"}",
             style = MaterialTheme.typography.bodySmall,
         )
+        if (tel != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { telemetry.enviarAgora() }) { Text("Enviar telemetria agora") }
+                OutlinedButton(onClick = { verTelemetria = true }, enabled = telemetry.ultimoEnvio != null) { Text("Ver a última enviada") }
+            }
+        }
         Text(tips.resumo(), style = MaterialTheme.typography.bodySmall)
         Text("Versão instalada: ${updater.versaoInstalada} (código ${updater.codigoInstalado})", style = MaterialTheme.typography.bodySmall)
         Text(updater.resumo(), style = MaterialTheme.typography.bodySmall)
@@ -599,6 +606,25 @@ fun SettingsScreen(
 
     // Em um diálogo, para as alterações ainda não salvas nesta tela não se perderem ao consultar a documentação.
     docsTab?.let { DocsDialog(initialTab = it, onClose = { docsTab = null }) }
+
+    if (verTelemetria) {
+        AlertDialog(
+            onDismissRequest = { verTelemetria = false },
+            title = { Text("Última telemetria enviada") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(telemetry.status ?: "", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        telemetry.ultimoEnvio ?: "Nada enviado ainda.",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { verTelemetria = false }) { Text("Fechar") } },
+        )
+    }
 
     if (confirmRemoveOwner) {
         AlertDialog(
