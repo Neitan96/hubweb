@@ -398,7 +398,29 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         lastInput = SystemClock.elapsedRealtime()
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("HubWebKeys", "key=${KeyEvent.keyCodeToString(event.keyCode)} action=${event.action} " +
+                "uni=${event.unicodeChar} chars=${event.characters} dev=${event.deviceId} src=${event.source} " +
+                "flags=${event.flags} meta=${event.metaState} rep=${event.repeatCount}")
+        }
+        if (colarDoLeitor(event)) return true
         return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Coletores como o Daishin (MB_BarcodeTray) entregam o código copiando-o e mandando Ctrl+V. O Chrome trata esse atalho,
+     * o WebView não: então o app cola o texto da área de transferência no campo focado da página.
+     */
+    private fun colarDoLeitor(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_V || !event.isCtrlPressed || screen != Screen.BROWSER) return false
+        val wv = current?.webView ?: return false
+        if (event.action != KeyEvent.ACTION_DOWN) return true // o ACTION_UP do mesmo atalho também é engolido
+        val texto = runCatching {
+            val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+        }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return false
+        runCatching { KeyInjector.type(wv, texto, "") }
+        return true
     }
 
     private val tick = object : Runnable {
