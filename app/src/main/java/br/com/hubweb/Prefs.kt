@@ -161,6 +161,11 @@ class Prefs(ctx: Context) {
         get() = sp.getString("appNovaJson", "") ?: ""
         set(v) = sp.edit().putString("appNovaJson", v).apply()
 
+    /** Último crash do app (JSON), guardado até ser enviado na abertura seguinte. */
+    var crashJson: String
+        get() = sp.getString("crashJson", "") ?: ""
+        set(v) = sp.edit().putString("crashJson", v).commit().let { }
+
     /** Usuários identificados por sistema (JSON); vale até o aparelho reiniciar, como os cookies. */
     var usersJson: String
         get() = sp.getString("usersJson", "") ?: ""

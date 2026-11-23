@@ -267,7 +267,7 @@ class Telemetry(
      * Evento de login/logout/troca de usuário (detecções por evento): vai na hora para o endpoint
      * **"eventos"** da lista, que é diferente do da telemetria. Sem esse bloco no JSON, nada é enviado.
      */
-    fun sendEvent(evento: String, sistema: String, login: String, fonte: String, anterior: String?) {
+    fun sendEvent(evento: String, sistema: String, login: String, fonte: String, anterior: String?, erro: JSONObject? = null) {
         val ev = repo.eventos
         if (ev != null && !ev.ativo) return
         val tel = repo.telemetria
@@ -279,10 +279,11 @@ class Telemetry(
                 put("evento", evento)
                 put("timestamp", isoNow())
                 put("dispositivo", deviceJson())
-                put("sistema", sistema)
-                put("usuario", login)
+                put("sistema", sistema.ifEmpty { null } ?: JSONObject.NULL)
+                put("usuario", login.ifEmpty { null } ?: JSONObject.NULL)
                 put("fonte", fonte)
                 put("usuarioAnterior", anterior ?: JSONObject.NULL)
+                if (erro != null) put("erro", erro)
             })
         } catch (_: Exception) {
             return
@@ -378,9 +379,11 @@ class Telemetry(
     private fun deviceJson() = JSONObject().apply {
         put("nome", DeviceInfo.name(ctx))
         put("id", DeviceInfo.androidId(ctx))
+        put("serial", DeviceInfo.serial(ctx))
         put("modelo", DeviceInfo.model())
         put("android", Build.VERSION.RELEASE.orEmpty())
         put("app", appVersion())
+        put("webview", Motor.versaoWebView(ctx).ifEmpty { null } ?: JSONObject.NULL)
         runCatching { UrmoboInfo.acrescentar(ctx, this) } // urmobo_* se o Urmobo respondeu
     }
 

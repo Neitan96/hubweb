@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -120,9 +121,41 @@ class MainActivity : ComponentActivity() {
             fileCb = null
         }
 
+    private var geckoArquivoCb: ((Array<Uri>?) -> Unit)? = null
+    private val geckoFileLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+            val cb = geckoArquivoCb
+            geckoArquivoCb = null
+            val d = r.data
+            val uris: Array<Uri>? = if (r.resultCode != RESULT_OK || d == null) null else {
+                val c = d.clipData
+                if (c != null) Array(c.itemCount) { c.getItemAt(it).uri } else d.data?.let { arrayOf(it) }
+            }
+            cb?.invoke(uris)
+        }
+
+    /** Seletor de arquivos para o motor Gecko (o WebView usa o pickFile). */
+    fun pickFileGecko(mimes: Array<String>, multiple: Boolean, cb: (Array<Uri>?) -> Unit) {
+        geckoArquivoCb?.invoke(null)
+        geckoArquivoCb = cb
+        try {
+            val tipos = mimes.filter { it.contains('/') }
+            val i = Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType(if (tipos.size == 1) tipos[0] else "*/*")
+                .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+            if (tipos.size > 1) i.putExtra(Intent.EXTRA_MIME_TYPES, tipos.toTypedArray())
+            geckoFileLauncher.launch(i)
+        } catch (e: Exception) {
+            geckoArquivoCb = null
+            cb(null)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MotorGecko.activity = this
         prefs = Prefs(this)
+        AppLog.instalarCrash(prefs)
         ManagedConfig.apply(this, prefs) // URL e token vindos do MDM, antes de decidir a tela inicial
         resetSessionIfRebooted()
         repo = ConfigRepo(this, prefs).also {
@@ -152,6 +185,9 @@ class MainActivity : ComponentActivity() {
             )
         }
         telemetry.tracker = tracker
+        AppLog.telemetry = telemetry
+        AppLog.repo = repo
+        AppLog.enviarCrashPendente(prefs)
         telemetry.estadoApp = {
             val nulo = org.json.JSONObject.NULL
             fun iso(ms: Long) = if (ms > 0) DeviceStats.iso(ms) else nulo
@@ -513,7 +549,7 @@ class MainActivity : ComponentActivity() {
 
     private fun openPopup(item: AppItem) {
         // Motor GeckoView (protótipo): o popup também usa o Gecko; sem ele nesta build, abre no WebView.
-        if (item.motor == "gecko" && MotorGecko.disponivel) {
+        if (Motor.usaGecko(this, item)) {
             geckoPopup = item
             return
         }
@@ -568,7 +604,7 @@ class MainActivity : ComponentActivity() {
 
     private fun openApp(item: AppItem, abrirEm: String? = null) {
         // Motor GeckoView (protótipo): só nas builds que o incluem; nas demais o item abre no WebView normal.
-        if (item.motor == "gecko" && MotorGecko.disponivel) {
+        if (Motor.usaGecko(this, item)) {
             geckoItem = item
             AppStats.abrirSistema(item.nome)
             screen = Screen.GECKO

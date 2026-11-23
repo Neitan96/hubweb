@@ -181,6 +181,7 @@ class WebPool(
                 val ok = item.allows(request.url)
                 if (!ok) {
                     toast("Bloqueado: ${request.url.toString().substringBefore('?').take(120)}", long = true)
+                    AppLog.registrar("url_bloqueada", item.nome, "navegação fora de urlPermitida", request.url.toString())
                 }
                 return !ok // true = bloqueia
             }
@@ -209,12 +210,20 @@ class WebPool(
                 if (request.isForMainFrame) {
                     entry.error = error.description?.toString() ?: "Falha ao carregar"
                     entry.loading = false
+                    AppLog.registrar("rede", item.nome, "${error.errorCode} ${error.description}", request.url.toString())
+                }
+            }
+
+            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, resp: android.webkit.WebResourceResponse) {
+                if (request.isForMainFrame && resp.statusCode >= 400) {
+                    AppLog.registrar("http", item.nome, "HTTP ${resp.statusCode}", request.url.toString())
                 }
             }
 
             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
                 handler.cancel() // nunca ignora erro de certificado
                 if (error.url == view.url || error.url == view.originalUrl) entry.error = "Certificado inválido"
+                AppLog.registrar("certificado", item.nome, "erro SSL ${error.primaryError}", error.url)
             }
         }
 
@@ -241,6 +250,7 @@ class WebPool(
                 if (!item.permitirUpload) {
                     callback.onReceiveValue(null)
                     toast("Upload bloqueado")
+                    AppLog.registrar("upload_bloqueado", item.nome, "permitirUpload desligado", view0(webView))
                     return true
                 }
                 return activity.pickFile(params, callback)
@@ -251,6 +261,7 @@ class WebPool(
             val uri = Uri.parse(url)
             if (!item.permitirDownload || !item.allows(uri)) {
                 toast("Download bloqueado")
+                AppLog.registrar("download_bloqueado", item.nome, "permitirDownload desligado ou URL fora de urlPermitida", url)
                 return@DownloadListener
             }
             if (Build.VERSION.SDK_INT < 29 && !activity.hasStoragePermission()) {
@@ -282,6 +293,8 @@ class WebPool(
         else entry.error = "URL inicial usa HTTP, mas permitirHttp está desligado"
         return entry
     }
+
+    private fun view0(w: WebView): String? = w.url
 
     private fun toast(msg: String, long: Boolean = false) =
         Toast.makeText(activity, msg, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()

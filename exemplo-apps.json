@@ -13,7 +13,9 @@
   "novoToken_doc": "OPCIONAL. Troca o token Bearer da lista guardado no aparelho. Pode vir sozinho (mantém a URL) ou junto de novaConfigUrl; o app testa a lista com o token novo antes de adotar. \"\" apaga o token. Não vale para o token definido pelo MDM.",
 
   "motorPadrao": "webview",
-  "motorPadrao_doc": "OPCIONAL. Motor de navegação de todos os apps que não definem 'motor': 'webview' (padrão, o do Android) ou 'gecko' (Firefox embutido, na build sem Gecko, compilada com -PsemGecko, abre no webview). Cada app pode mudar o seu com o campo 'motor'.",
+  "motorPadrao_doc": "OPCIONAL. Motor de navegação de todos os apps que não definem 'motor': 'webview' (padrão, o do Android), 'gecko' (Firefox embutido; na build sem Gecko, compilada com -PsemGecko, abre no webview) ou 'auto' (usa o Gecko só nos aparelhos cujo WebView é mais antigo que 'webviewMinimo'). Cada app pode mudar o seu com o campo 'motor'.",
+  "webviewMinimo": 80,
+  "webviewMinimo_doc": "OPCIONAL. Com motor 'auto': versão principal mínima do WebView (a do Chrome, ex.: 80). Abaixo dela o sistema abre no Gecko. Padrão 80. A versão de cada aparelho vai na telemetria, em dispositivo.webview.",
   "abrirAoEntrar": {
     "sistema": "Webmail",
     "sistema_doc": "OPCIONAL. Nome (o 'nome' de um item de 'apps') do sistema que o app abre sozinho ao entrar. Sem este bloco, o app fica no hub. Também aceita só o nome: \"abrirAoEntrar\": \"Webmail\". Se o nome não existir na lista, nada é aberto.",
@@ -40,7 +42,7 @@
   "sistemasAbertos_doc": "Lista de faixas de RAM para a quantidade de sistemas mantidos abertos (cada um guarda a sessão e a página). Também aceita só um número (ex.: 2) para todos os aparelhos. Sem esta chave, vale 2.",
 
   "rodape": "{nome} · {ip}",
-  "rodape_doc": "Texto fixo no rodapé do hub. Aceita as variáveis {nome} (nome do aparelho), {ip} (IPv4 local), {modelo}, {android}, {app} (versão do HubWeb), {id} (Android ID) e {atualizacao} (hora da última lista recebida); use \\n para quebrar linha (até 3 linhas). Atualiza a cada 10 s. Sem esta chave, ou com texto vazio, nada é mostrado.",
+  "rodape_doc": "Texto fixo no rodapé do hub. Aceita as variáveis {nome} (nome do aparelho), {ip} (IPv4 local), {modelo}, {android}, {app} (versão do HubWeb), {id} (Android ID), {serial} (serial próprio do HubWeb) e {atualizacao} (hora da última lista recebida); use \\n para quebrar linha (até 3 linhas). Atualiza a cada 10 s. Sem esta chave, ou com texto vazio, nada é mostrado.",
 
   "aparencia": {
     "_doc": "Personalização do cabeçalho do hub.",
@@ -116,7 +118,9 @@
 
   "eventos": {
     "ativo": true,
-    "ativo_doc": "false desliga os eventos de login/logout (padrão true).",
+    "ativo_doc": "false desliga todos os eventos (login/logout e erros; padrão true).",
+    "erros": true,
+    "erros_doc": "false desliga só os eventos de erro/falha do app (rede, certificado, URL bloqueada, crash...); os de login/logout continuam (padrão true).",
     "url": null,
     "url_doc": "Endereço próprio para os eventos (tipo 'evento'). Sem ele, os eventos vão para a telemetria.url, com tipo 'evento'. Só https. Aqui vale null (usa o endereço da telemetria); para um endereço próprio, ponha por exemplo https://api.exemplo.com/hubweb/eventos.",
     "token": null,
@@ -156,7 +160,7 @@
       "nome": "Webmail",
       "nome_doc": "Nome do sistema: aparece no cartão do hub, na barra e nos eventos de usuário (obrigatório).",
       "urlInicial": "https://mail.exemplo.com/?dispositivo={nome}&ip={ip}",
-      "urlInicial_doc": "Primeira página do sistema (obrigatória). Aceita as variáveis do aparelho {nome}, {ip}, {modelo}, {android}, {app} e {id}, já codificadas para URL; elas valem só na primeira carga. Também aceita {usuario} (login atual neste sistema), {usuario:Nome do sistema} (o de outro sistema), {usuarioDesde}, {fabricante}, {bateria}, {carregando}, {ssid}, {redeTipo}, {sinalDbm}, {ramLivreMb}, {armazenamentoLivreMb}, {versaoLista}, {sistemaAnterior}, {hora}, {data}, {deviceOwner}, {kiosk}, {lat} e {lon}; o que o app não souber vira vazio. Tudo na URL aparece em logs de servidor: use HTTPS e só o que precisar.",
+      "urlInicial_doc": "Primeira página do sistema (obrigatória). Aceita as variáveis do aparelho {nome}, {ip}, {modelo}, {android}, {app}, {id} e {serial}, já codificadas para URL; elas valem só na primeira carga. Também aceita {usuario} (login atual neste sistema), {usuario:Nome do sistema} (o de outro sistema), {usuarioDesde}, {fabricante}, {bateria}, {carregando}, {ssid}, {redeTipo}, {sinalDbm}, {ramLivreMb}, {armazenamentoLivreMb}, {versaoLista}, {sistemaAnterior}, {hora}, {data}, {deviceOwner}, {kiosk}, {lat} e {lon}; o que o app não souber vira vazio. Tudo na URL aparece em logs de servidor: use HTTPS e só o que precisar.",
       "urlPermitida": ["mail.exemplo.com/*", "login.exemplo.com/*"],
       "urlPermitida_doc": "Endereços em que o sistema pode navegar: texto ou lista, no formato host/caminho com * (qualquer coisa) e ? (um caractere), sem a query. Qualquer navegação fora é bloqueada, e o aviso mostra o endereço bloqueado. Sem esta chave, vale o host da urlInicial.",
       "permitirCopiarColar": false,
@@ -189,7 +193,7 @@
       "leitorSufixo": "enter",
       "leitorSufixo_doc": "O que enviar depois do código lido: 'enter' (padrão), 'tab' ou '' (nada).",
       "motor": "webview",
-      "motor_doc": "OPCIONAL. Motor deste app: 'webview' ou 'gecko' (Firefox embutido, nas builds -PsemGecko abre no webview). Vale mais que o 'motorPadrao' da raiz; sem ele vale o 'motorPadrao' (senão 'webview').",
+      "motor_doc": "OPCIONAL. Motor deste app: 'webview', 'gecko' (Firefox embutido, nas builds -PsemGecko abre no webview) ou 'auto' (Gecko só se o WebView do aparelho for mais antigo que 'webviewMinimo' da raiz). Vale mais que o 'motorPadrao' da raiz; sem ele vale o 'motorPadrao' (senão 'webview').",
       "recarregarAoMudar": true,
       "recarregarAoMudar_doc": "Se a urlInicial tem variáveis, volta a ela quando alguma mudar (usuário, rede, nome...). Ignora as que variam sempre (bateria, sinal, hora, posição...). Padrão true; false desliga.",
       "permitirUpload": false,

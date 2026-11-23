@@ -39,6 +39,8 @@ class EventosConfig(
     /** Token do endpoint próprio; se ausente, usa o da telemetria (mesmo endpoint) ou o da lista (mesmo servidor). */
     val token: String?,
     val ativo: Boolean = true,
+    /** false = não envia os eventos de erro/falha do app (AppLog). */
+    val erros: Boolean = true,
 )
 
 /**
@@ -484,10 +486,11 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
             val t = text.trim().removePrefix("﻿")
             val root = if (t.startsWith("[")) null else JSONObject(t)
             // "motorPadrao" (raiz): motor de todos os apps que não definem "motor" ("webview" ou "gecko").
-            val motorPadrao = if (root?.str("motorPadrao")?.trim()?.lowercase() == "gecko") "gecko" else "webview"
-            val apps = parseApps(root?.getJSONArray("apps") ?: JSONArray(t), motorPadrao = motorPadrao)
+            val motorPadrao = when (root?.str("motorPadrao")?.trim()?.lowercase()) { "gecko" -> "gecko"; "auto" -> "auto"; else -> "webview" }
+            val webviewMin = (root?.optInt("webviewMinimo", Motor.MINIMO_PADRAO) ?: Motor.MINIMO_PADRAO).coerceAtLeast(1)
+            val apps = parseApps(root?.getJSONArray("apps") ?: JSONArray(t), motorPadrao = motorPadrao, webviewMinimo = webviewMin)
             // Formato antigo: array "flutuantes" na raiz (itens só flutuantes). Ainda aceito.
-            val legados = root?.optJSONArray("flutuantes")?.let { parseApps(it, legado = true, motorPadrao = motorPadrao) }.orEmpty()
+            val legados = root?.optJSONArray("flutuantes")?.let { parseApps(it, legado = true, motorPadrao = motorPadrao, webviewMinimo = webviewMin) }.orEmpty()
             return finishConfig(root, (apps + legados).distinctBy { it.id })
         }
 
@@ -495,7 +498,9 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
          * Itens de "apps". Cada um aparece no hub (`hub`, padrão true) e/ou como botão flutuante
          * (`flutuante`, padrão false); `flutuanteObrigatorio` trava o botão ligado.
          */
-        private fun parseApps(arr: JSONArray, legado: Boolean = false, motorPadrao: String = "webview"): List<AppItem> {
+        private fun parseApps(
+            arr: JSONArray, legado: Boolean = false, motorPadrao: String = "webview", webviewMinimo: Int = Motor.MINIMO_PADRAO,
+        ): List<AppItem> {
             val out = ArrayList<AppItem>()
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
@@ -550,8 +555,10 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
                     motor = when (o.str("motor")?.trim()?.lowercase()) {
                         "gecko" -> "gecko"
                         "webview" -> "webview"
+                        "auto" -> "auto"
                         else -> motorPadrao
                     },
+                    webviewMinimo = webviewMinimo,
                 )
             }
             return out.distinctBy { it.id }
@@ -657,6 +664,7 @@ class ConfigRepo(private val ctx: Context, private val prefs: Prefs) {
                     url = e.str("url")?.trim()?.takeIf { it.isNotEmpty() },
                     token = e.str("token")?.trim()?.takeIf { it.isNotEmpty() },
                     ativo = e.bool("ativo", true),
+                    erros = e.bool("erros", true),
                 )
             }
             // "calculadora": {"habilitada": true, "obrigatoria": false, "inicial": false}.

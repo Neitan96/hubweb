@@ -92,7 +92,7 @@ Campos de cada item de `apps`:
 | `barra` | não | tudo visível | Objeto com `visivel`, `voltar`, `atualizar` e `inicio`: barra já aberta ou oculta e quais botões ela tem (veja "Personalização do hub e da barra dos sistemas") |
 | `leitorCamera` | não | `false` | Mostra na barra do item um botão para ler código de barras/QR pela câmera (veja "Leitor de código pela câmera") |
 | `leitorSufixo` | não | `"enter"` | O que enviar depois do código: `"enter"`, `"tab"` ou `""` (nada) |
-| `motor` | não | `motorPadrao` da raiz (senão `"webview"`) | **Protótipo.** O `motorPadrao` (campo `"motorPadrao": "gecko"` na raiz do JSON) vale para todos os apps; o `motor` do app vence. `"gecko"` abre o sistema no Firefox embutido (GeckoView), para aparelhos cujo WebView do sistema é antigo demais. O Gecko vai em todas as builds (APK ~50 MB maior; só arm64: em outros aparelhos, ou numa build `gradlew assembleRelease -PsemGecko`, o item abre no WebView normal). Por enquanto o Gecko só navega (voltar, atualizar, início): sem detecção de usuário, leitor de código, upload, download nem câmera |
+| `motor` | não | `motorPadrao` da raiz (senão `"webview"`) | **Protótipo.** O `motorPadrao` (campo `"motorPadrao": "gecko"` na raiz do JSON) vale para todos os apps; o `motor` do app vence. `"gecko"` abre o sistema no Firefox embutido (GeckoView), para aparelhos cujo WebView do sistema é antigo demais. `"auto"` escolhe sozinho, aparelho por aparelho: usa o Gecko só quando a versão principal do WebView é menor que `webviewMinimo` (campo na raiz do JSON, padrão `80`) e o WebView normal no resto; se a versão não puder ser lida, fica no WebView. A versão do WebView de cada aparelho vai na telemetria em `dispositivo.webview`. O Gecko vai em todas as builds (APK ~50 MB maior; só arm64: em outros aparelhos, ou numa build `gradlew assembleRelease -PsemGecko`, o item abre no WebView normal). No Gecko funcionam: barra configurável, detecção de usuário (menos o tipo `cookie`), leitor físico do coletor, upload, download (vai para Downloads), câmera (`permitirCamera`) e janelas `alert`/`confirm`/`prompt`; ainda faltam o botão do leitor por câmera (`leitorCamera`) e o login por crachá |
 | `barra.posicao` | não | `"topo"` | Onde fica a barra do sistema (launcher, voltar, atualizar, início): `"topo"` ou `"baixo"`. Igual no WebView e no Gecko (junto de `barra.visivel`, `barra.voltar`, `barra.atualizar`, `barra.inicio`) |
 | `recarregarAoMudar` | não | `true` | Se a `urlInicial` tem variáveis (`{usuario}`, `{ssid}`, `{nome}`, `{versaoLista}`...), volta à `urlInicial` quando o valor de alguma delas muda. Variáveis que mudam o tempo todo (`bateria`, `carregando`, `sinalDbm`, `ramLivreMb`, `armazenamentoLivreMb`, `hora`, `data`, `lat`, `lon`, `sistemaAnterior`) são ignoradas na comparação. Verifica a cada 15 s. `false` desliga |
 
@@ -106,7 +106,7 @@ Campos de cada item de `apps`:
 A **lista** e as **dicas** são buscadas com **POST**, e o corpo traz os dados do aparelho, com os mesmos nomes e valores da chave `dispositivo` da telemetria:
 
 ```json
-{ "dispositivo": { "nome": "COLETOR-07", "id": "9f3a...", "modelo": "Zebra TC52", "android": "11", "app": "1.0.7" } }
+{ "dispositivo": { "nome": "COLETOR-07", "id": "9f3a...", "serial": "7C1E94B0A25D3F68", "modelo": "Zebra TC52", "android": "11", "app": "1.0.7", "webview": "126.0.6478.122" } }
 ```
 
 - **`nome`**, **`id`** (identificador estável do aparelho), **`modelo`**, **`android`** (versão) e **`app`** (versão do HubWeb). Vai com `Content-Type: application/json` e o `Authorization: Bearer` de sempre.
@@ -200,7 +200,7 @@ Dois limites vêm da lista, na raiz do JSON:
 ## Dados do aparelho na URL inicial
 A `urlInicial` (no hub e no botão flutuante) aceita variáveis que o app troca por valores do aparelho, já codificados para URL, na abertura e também em atualizar/início:
 
-`{nome}` · `{ip}` (IPv4 local; vazio se sem rede) · `{modelo}` · `{android}` · `{app}` (versão do HubWeb) · `{id}` (Android ID)
+`{nome}` · `{ip}` (IPv4 local; vazio se sem rede) · `{modelo}` · `{android}` · `{app}` (versão do HubWeb) · `{id}` (Android ID) · `{serial}` (serial próprio do HubWeb)
 
 **Variáveis extras** (só na `urlInicial`; o rodapé não as aceita). O que o app não souber vira vazio, e um nome desconhecido fica como escrito:
 
@@ -304,9 +304,9 @@ Campos comuns: `regex` (aplicado ao valor lido; usa o grupo 1 se houver), `campo
 
 Por padrão os eventos vão para o **mesmo endpoint da telemetria** (o campo `tipo` do envelope diferencia, veja "Payloads"). Para mandar para um endereço próprio, ou desligar, use o bloco `eventos` na raiz do JSON:
 ```json
-"eventos": { "url": "https://api.exemplo.com/hubweb/eventos", "token": "opcional", "ativo": true }
+"eventos": { "url": "https://api.exemplo.com/hubweb/eventos", "token": "opcional", "ativo": true, "erros": true }
 ```
-Sem `url`, vale o endpoint da telemetria. `"ativo": false` desliga os eventos. Precisa ser `https`. O token é opcional; sem ele vale o da telemetria (se o destino for o mesmo) ou o da lista (se for o mesmo servidor).
+Sem `url`, vale o endpoint da telemetria. `"ativo": false` desliga os eventos; `"erros": false` desliga só os eventos de erro do app (veja "Eventos de erro"). Precisa ser `https`. O token é opcional; sem ele vale o da telemetria (se o destino for o mesmo) ou o da lista (se for o mesmo servidor).
 
 **Regra de sucesso** (`formulario` e `requisicao`), objeto `sucesso`:
 - `tipo`: `senhaSumiu` (padrão; só olha se o campo de senha sumiu da tela, sem ler o valor), `url` (`regex` da URL depois do login), `elemento` (`seletor` que aparece) ou `endpoint` (`url`, `campo`).
@@ -574,6 +574,30 @@ Authorization: Bearer <token>        (se houver)
 
 Só as detecções **por evento** (`formulario`, `requisicao`, `resposta`, `cracha`, ou qualquer uma com `"envio": "evento"`) enviam, e só se os eventos não estiverem desligados (`eventos.ativo`). Os tipos de consulta contínua não geram evento: aparecem em `usuarios` na telemetria.
 
+#### Eventos de erro
+
+Falhas do app vão **na hora**, com `tipo: "evento"` e `evento: "erro"`, para o mesmo destino dos eventos de usuário. O envelope é o mesmo, com `fonte` igual à categoria, `usuario` nulo e o bloco `erro`:
+
+```json
+{ "tipo": "evento", "payload": {
+  "evento": "erro", "timestamp": "2026-11-22T20:15:44Z", "dispositivo": { "...": "..." },
+  "sistema": "Windmill", "usuario": null, "fonte": "rede", "usuarioAnterior": null,
+  "erro": { "categoria": "rede", "detalhe": "-2 net::ERR_NAME_NOT_RESOLVED", "url": "https://exemplo.com/app" }
+} }
+```
+
+| `categoria` | Quando |
+|---|---|
+| `rede` | a página inicial/principal não carregou (sem rede, DNS, tempo esgotado) |
+| `http` | a página principal respondeu com status 4xx/5xx (`detalhe`: "HTTP 503") |
+| `certificado` | certificado inválido (a página é bloqueada) |
+| `url_bloqueada` | navegação fora de `urlPermitida` |
+| `upload_bloqueado`, `download_bloqueado` | o sistema tentou, sem `permitirUpload`/`permitirDownload` (ou URL fora da lista) |
+| `motor_crash` | o Gecko caiu ou foi encerrado pelo Android |
+| `crash` | o HubWeb fechou por uma falha; vai na **abertura seguinte**, com `erro.pilha` e `erro.quando` (`sistema` vazio) |
+
+A `url` vai sem a query (`?...`). A mesma falha no mesmo sistema só se repete a cada 10 minutos, com teto de 40 eventos por hora. Sem rede o evento se perde (não há fila). `eventos.erros: false` desliga esta lista.
+
 Login (a primeira vez que a detecção vê alguém):
 ```json
 {
@@ -788,6 +812,7 @@ Texto fixo na parte inferior do launcher, definido pelo campo `rodape` (raiz do 
 | `{android}` | Versão do Android |
 | `{app}` | Versão do HubWeb |
 | `{id}` | Android ID do aparelho |
+| `{serial}` | Serial próprio do HubWeb: um código gerado na primeira abertura e guardado no app; no Android 9 ou menos, com a permissão de armazenamento, também em `Documents/HubWeb/serial.txt`, o que o mantém ao reinstalar o app. Não sobrevive a reset de fábrica (nem, do Android 10 em diante, a reinstalar). Vai na telemetria e no POST da lista como `dispositivo.serial` |
 | `{atualizacao}` | Data/hora da última lista recebida |
 
 O rodapé aceita **todas** as variáveis da `urlInicial` (`{usuario:Sistema}`, `{ssid}`, `{bateria}`, `{urmoboNome}`...) e o valor alternativo `{a|b|"texto"}` (veja "Valor alternativo" abaixo).

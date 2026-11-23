@@ -52,7 +52,7 @@ object UrlVars {
     )
 
     // Variáveis do aparelho (DeviceInfo) e {atualizacao} (só no rodapé).
-    private val DISPOSITIVO = setOf("nome", "ip", "modelo", "android", "app", "id", "atualizacao")
+    private val DISPOSITIVO = setOf("nome", "ip", "modelo", "android", "app", "id", "serial", "atualizacao")
 
     /** Nome sem maiúsculas nem "_" -> nome oficial; assim {urmobo_nome} e {urmoboNome} são a mesma variável. */
     private val CANON: Map<String, String> by lazy { (NOMES + DISPOSITIVO).associateBy { it.replace("_", "").lowercase() } }
@@ -139,7 +139,7 @@ object UrlVars {
     }
 
     private fun valor(nome: String, arg: String?, ctx: Context, item: AppItem?, ultimaAtualizacao: Long): String = when (nome) {
-        "nome", "ip", "modelo", "android", "app", "id" -> DeviceInfo.valorDe(nome, ctx).orEmpty()
+        "nome", "ip", "modelo", "android", "app", "id", "serial" -> DeviceInfo.valorDe(nome, ctx).orEmpty()
         "atualizacao" -> if (ultimaAtualizacao > 0) SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(ultimaAtualizacao)) else "-"
         "usuario" -> usuario(arg ?: item?.nome.orEmpty())?.login.orEmpty()
         "usuarioDesde" -> usuario(arg ?: item?.nome.orEmpty())?.let { DeviceStats.iso(it.desde) }.orEmpty()

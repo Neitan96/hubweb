@@ -28,4 +28,26 @@
       novo: !!d.novo
     }).catch(function () {});
   });
+
+  // Canal com o app: ele pede para gravar um texto no campo focado (leitor de código com acentos e símbolos).
+  try {
+    var porta = browser.runtime.connectNative(APP);
+    porta.onMessage.addListener(function (m) {
+      if (!m || m.t !== 'digitar' || typeof m.texto !== 'string') return;
+      var e = document.activeElement;
+      while (e && e.contentDocument && e.contentDocument.activeElement) e = e.contentDocument.activeElement;
+      if (!e) return;
+      var ok = false;
+      try { ok = document.execCommand('insertText', false, m.texto); } catch (x) {}
+      if (ok) return;
+      try {
+        if (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA') {
+          var proto = e.tagName === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+          Object.getOwnPropertyDescriptor(proto, 'value').set.call(e, (e.value || '') + m.texto);
+          e.dispatchEvent(new Event('input', { bubbles: true }));
+          e.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } catch (x) {}
+    });
+  } catch (e) {}
 })();

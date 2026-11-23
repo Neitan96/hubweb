@@ -93,6 +93,8 @@ data class AppItem(
     val recarregarAoMudar: Boolean = true,
     /** Motor de navegação: "webview" (padrão, o do Android) ou "gecko" (Firefox embutido; só nas builds com GeckoView). */
     val motor: String = "webview",
+    /** Com motor "auto": versão principal mínima do WebView; abaixo dela o sistema abre no Gecko. */
+    val webviewMinimo: Int = Motor.MINIMO_PADRAO,
 ) {
     val id: String get() = "$nome|$urlInicial"
 
